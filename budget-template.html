@@ -328,28 +328,28 @@
     function renderStaff() {
         const count = document.getElementById('numStaff').value;
         let html = '';
-        for(let i=0; i<count; i++) html += `<div class="dynamic-wrapper"><div class="row"><div class="col"><input type="text" id="staffName_${i}" placeholder="Staff Name"></div><div class="col"><label>Base Salary</label><input type="number" id="staffBase_${i}" value="80000" placeholder="Base Salary"></div><div class="col"><label>% Effort on Project</label><input type="number" id="staffEffort_${i}" value="100" min="0" max="100" placeholder="% Effort"></div></div></div>`;
+        for(let i=0; i<count; i++) html += `<div class="dynamic-wrapper"><div class="row"><div class="col"><input type="text" id="staffName_${i}" placeholder="Staff Name (optional)"></div><div class="col"><label>Base Salary</label><input type="number" id="staffBase_${i}" value="80000" placeholder="Base Salary"></div><div class="col"><label>% Effort on Project</label><input type="number" id="staffEffort_${i}" value="100" min="0" max="100" placeholder="% Effort"></div></div></div>`;
         document.getElementById('staffContainer').innerHTML = html;
     }
 
     function renderPostDocs() {
         const count = document.getElementById('numPostDocs').value;
         let html = '';
-        for(let i=0; i<count; i++) html += `<div class="dynamic-wrapper"><div class="row"><div class="col"><input type="text" id="pdName_${i}" placeholder="PostDoc Name"></div><div class="col"><input type="number" id="pdBase_${i}" value="80000" placeholder="Base Salary"></div></div></div>`;
+        for(let i=0; i<count; i++) html += `<div class="dynamic-wrapper"><div class="row"><div class="col"><input type="text" id="pdName_${i}" placeholder="PostDoc Name (optional)"></div><div class="col"><input type="number" id="pdBase_${i}" value="80000" placeholder="Base Salary"></div></div></div>`;
         document.getElementById('postDocContainer').innerHTML = html;
     }
 
     function renderGrads() {
         const count = document.getElementById('numGrads').value;
         let html = '';
-        for(let i=0; i<count; i++) html += `<div class="dynamic-wrapper"><div class="row"><div class="col"><input type="text" id="gradName_${i}" placeholder="Name"></div><div class="col"><label>Monthly Stipend</label><input type="number" id="gradStipend_${i}" value="2500"></div><div class="col"><label>Tuition Included?</label><select id="gradTuition_${i}"><option value="1">Yes</option><option value="0">No</option></select></div></div></div>`;
+        for(let i=0; i<count; i++) html += `<div class="dynamic-wrapper"><div class="row"><div class="col"><input type="text" id="gradName_${i}" placeholder="Name (optional)"></div><div class="col"><label>Monthly Stipend</label><input type="number" id="gradStipend_${i}" value="2500"></div><div class="col"><label>Tuition Included?</label><select id="gradTuition_${i}"><option value="1">Yes</option><option value="0">No</option></select></div></div></div>`;
         document.getElementById('gradContainer').innerHTML = html;
     }
 
     function renderUndergrads() {
         const count = document.getElementById('numUndergrads').value;
         let html = '';
-        for(let i=0; i<count; i++) html += `<div class="dynamic-wrapper"><div class="row"><div class="col"><input type="text" id="ugName_${i}" placeholder="Name"></div><div class="col"><label>Hourly Rate</label><input type="number" id="ugRate_${i}" value="19.50" step="0.5"></div><div class="col"><label>Hrs/Wk (Acad)</label><input type="number" id="ugHrsAcad_${i}" value="10" max="20"></div><div class="col"><label>Hrs/Wk (Summer)</label><input type="number" id="ugHrsSum_${i}" value="40" max="40"></div></div></div>`;
+        for(let i=0; i<count; i++) html += `<div class="dynamic-wrapper"><div class="row"><div class="col"><input type="text" id="ugName_${i}" placeholder="Name (optional)"></div><div class="col"><label>Hourly Rate</label><input type="number" id="ugRate_${i}" value="19.50" step="0.5"></div><div class="col"><label>Hrs/Wk (Acad)</label><input type="number" id="ugHrsAcad_${i}" value="10" max="20"></div><div class="col"><label>Hrs/Wk (Summer)</label><input type="number" id="ugHrsSum_${i}" value="40" max="40"></div></div></div>`;
         document.getElementById('undergradContainer').innerHTML = html;
     }
 
