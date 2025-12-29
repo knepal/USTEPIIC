@@ -50,13 +50,23 @@
         
         .action-bar { display: flex; gap: 20px; margin-top: 40px; padding: 20px; background: #eee; border-radius: 5px; align-items: center; }
         
-        button.generate-btn { flex: 1; background-color: var(--ust-purple); color: white; padding: 15px; font-size: 1.2rem; border: none; cursor: pointer; transition: background 0.2s; font-weight: bold; border-radius: 5px; }
+        button.generate-btn { flex: 2; background-color: var(--ust-purple); color: white; padding: 15px; font-size: 1.2rem; border: none; cursor: pointer; transition: background 0.2s; font-weight: bold; border-radius: 5px; }
         button.generate-btn:hover { background-color: #3b1a6e; }
         
-        .justification-group { flex: 1; display: flex; gap: 10px; }
+        .justification-group { flex: 2; display: flex; gap: 10px; }
         button.justification-btn { flex: 1; background-color: var(--ust-purple); color: white; padding: 15px; font-size: 1.2rem; border: none; cursor: pointer; transition: background 0.2s; font-weight: bold; border-radius: 5px; }
         button.justification-btn:hover { background-color: #3b1a6e; }
-
+		select#justFormat {
+    flex: 1;
+    padding: 15px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--ust-purple);
+    border: 2px solid var(--ust-purple);
+    border-radius: 5px;
+    cursor: pointer;
+    background-color: white;
+}
         .dynamic-wrapper { border-left: 4px solid #ddd; padding-left: 15px; margin-top: 15px; padding-bottom: 10px; }
         .hidden { display: none; }
     </style>
