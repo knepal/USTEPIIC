@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<!--
+    Author: Kundan Nepal
+    Date: 12/29/2025
+    Note: NSF EPIIC Template Library Main Index File
+-->
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faculty External Partnership Toolkit - University of St. Thomas</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #492365 0%, #6b4984 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: #f8f9fa;
+            color: #333;
+            padding: 20px 40px;
+            border-bottom: 3px solid #492365;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .ust-logo {
+            height: 70px;
+            width: auto;
+        }
+
+        .header-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        header h1 {
+            font-size: 1.8em;
+            margin: 0;
+            font-weight: 600;
+            color: #2d1a4a;
+        }
+
+        header p {
+            font-size: 1em;
+            margin: 5px 0 0 0;
+            color: #492365;
+            font-weight: 500;
+        }
+
+        .intro {
+            padding: 40px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .intro h2 {
+            color: #492365;
+            margin-bottom: 15px;
+            font-size: 1.8em;
+        }
+
+        .intro p {
+            font-size: 1.1em;
+            color: #555;
+            margin-bottom: 10px;
+        }
+
+        .templates-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 30px;
+            padding: 40px;
+        }
+
+        .template-card {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 15px;
+            padding: 30px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .template-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: linear-gradient(90deg, #492365 0%, #6b4984 100%);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .template-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            border-color: #492365;
+        }
+
+        .template-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .template-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #492365 0%, #6b4984 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+            color: white;
+        }
+
+        .template-card h3 {
+            color: #2d3748;
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .template-card p {
+            color: #718096;
+            font-size: 1em;
+            margin-bottom: 20px;
+            line-height: 1.8;
+        }
+
+        .template-card .features {
+            list-style: none;
+            margin-bottom: 20px;
+        }
+
+        .template-card .features li {
+            padding: 8px 0;
+            color: #4a5568;
+            font-size: 0.95em;
+        }
+
+        .template-card .features li::before {
+            content: "✓";
+            color: #48bb78;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .template-link {
+            display: inline-block;
+            background: linear-gradient(135deg, #492365 0%, #6b4984 100%);
+            color: white;
+            padding: 12px 30px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .template-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(73, 35, 101, 0.4);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .status-active {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .status-coming {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+
+        footer {
+            background: #2d3748;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        footer p {
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        footer a {
+            color: #b794f4;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        .intro-box {
+            background: #f8f6fc;
+            border-left: 4px solid #512698;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .intro-box p {
+            margin: 0;
+            font-size: 0.9rem;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .nsf-acknowledgment {
+            font-style: italic;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .nsf-acknowledgment img {
+            height: 40px;
+            width: auto;
+            flex-shrink: 0;
+        }
+
+        .info-box {
+            background: #f8f6fc;
+            border-left: 4px solid #492365;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .info-box strong {
+            color: #492365;
+        }
+
+        @media (max-width: 768px) {
+            header {
+                padding: 15px 20px;
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .header-left {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+
+            .ust-logo {
+                height: 60px;
+            }
+
+            header h1 {
+                font-size: 1.5em;
+            }
+
+            header p {
+                font-size: 0.9em;
+            }
+
+            .templates-grid {
+                grid-template-columns: 1fr;
+                padding: 20px;
+            }
+
+            .intro {
+                padding: 20px;
+            }
+
+            .intro h2 {
+                font-size: 1.5em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-left">
+                <img src="https://www.stthomas.edu/apple-icon-152x152.png" alt="University of St. Thomas" class="ust-logo">
+                <div class="header-text">
+                    <h1>Faculty External Partnership Toolkit</h1>
+                    <p>School of Engineering</p>
+                </div>
+            </div>
+        </header>
+
+        <div class="intro">
+            <div style="display: flex; align-items: flex-start; gap: 20px; margin-bottom: 20px;">
+                <img src="https://www.nsf.gov/themes/custom/nsf_theme/components/molecules/logo/logo-desktop.png" alt="NSF Logo" style="height: 60px; width: auto; flex-shrink: 0;">
+                <p style="margin: 0; font-size: 0.9rem; line-height: 1.6;"><span style="font-style: italic; color: #666;">Development of this toolkit was supported by NSF EPIIC Award #2432471.</span><br><br>The goal of this work is to support School of Engineering faculty researchers in navigating external partnership and grant proposal processes with greater ease and efficiency. These interactive tools aim to reduce the burden on faculty PIs by providing templates with automated calculations, consistent formatting, and compliance with funding agency requirements.This toolkit is designed to help meet two focus areas of the NSF EPIIC grant: building institutional capacity for sustainable external partnerships and equipping faculty with accessible resources to initiate and manage research collaborations effectively .</p></div>
+            <div class="intro-box">
+                <p style="display: flex; align-items: flex-start; gap: 12px;"><span style="font-size: 1.5em; flex-shrink: 0;">🔒</span><span><strong>Privacy Note:</strong> All tools work directly in your browser - no installation required. Your data is stored locally and never sent to any server.</span></p>
+            </div>
+        </div>
+
+        <div class="templates-grid">
+            <!-- Budget and Justification Template -->
+            <div class="template-card">
+                <span class="status-badge status-active">Active</span>
+                <div class="template-icon">💰</div>
+                <h3>Budget & Justification</h3>
+				<p>Comprehensive budget planning tool with multi-year tracking (1-6 years), automatic fringe and indirect cost calculations, person-months conversion, and support for all budget categories including personnel, equipment, travel, and participant costs. Generates NSF-compliant budget and justification documents with export to Excel, Word, Markdown, and LaTeX formats.</p>
+                <a href="budget-template.html" class="template-link">Launch Template</a>
+            </div>
+
+            <!-- Facilities Document Template -->
+            <div class="template-card">
+                <span class="status-badge status-coming">Coming Soon</span>
+                <div class="template-icon">🏢</div>
+                <h3>Facilities Document</h3>
+              <p>Generate comprehensive facilities and equipment descriptions for grant proposals. This tool helps document laboratory and research spaces, equipment inventories, computing infrastructure, support services, and institutional capabilities using standard templates.</p>
+                <a href="#" class="template-link" style="opacity: 0.6; cursor: not-allowed;">Coming Soon</a>
+            </div>
+
+            <!-- Data Management Plan Template -->
+            <div class="template-card">
+                <span class="status-badge status-coming">Coming Soon</span>
+                <div class="template-icon">📊</div>
+                <h3>Data Management Plan</h3>
+				<p>Create NSF-compliant data management plans that document data types and formats, storage and backup strategies, sharing and access policies, and long-term preservation plans to meet federal funding requirements.</p>
+                <a href="#" class="template-link" style="opacity: 0.6; cursor: not-allowed;">Coming Soon</a>
+            </div>
+        </div>
+
+        <div class="intro-box" style="margin: 40px; margin-top: 0;">
+            <p class="nsf-acknowledgment">
+                <img src="https://www.nsf.gov/themes/custom/nsf_theme/components/molecules/logo/logo-desktop.png" alt="NSF Logo">
+                <span>This work is supported by the National Science Foundation under Grant No. 2432471. The templates and tools provided here were developed by the University of St. Thomas School of Engineering for internal use and are not endorsed, approved, or verified by the National Science Foundation. Any opinions, findings, and conclusions or recommendations expressed in this material are those of the author(s) and do not necessarily reflect the views of the National Science Foundation.</span>
+            </p>
+        </div>
+
+        <footer>
+            <p><strong>University of St. Thomas</strong> | School of Engineering</p>
+        </footer>
+    </div>
+</body>
+</html>

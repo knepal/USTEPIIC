@@ -1,0 +1,1844 @@
+<!DOCTYPE html>
+<html lang="en">
+<!--
+    Author: Kundan Nepal
+    Date: 12/27/2025
+    Note: Self-contained HTML/JavaScript tool for generating research grant budgets.
+          Supports multi-year projects with customizable personnel, equipment, travel,
+          and participant support costs. 
+		  Outputs XML-based Excel files and Budget Justification documents in Word/Markdown/LaTex formats.
+		  Key Features:
+          - Undergraduate fringe: 0% (Academic), 8% (Summer)
+          - Graduate students: 8% fringe rate
+          - Faculty: 35% (Academic/Buyout), 8% (Summer)
+          - Staff: 35% fringe rate
+          - Indirect costs: 41.4% of MTDC (fixed)
+          - All rates based on UST federally negotiated agreements
+          - Dark purple subtotal formatting with currency (2 decimals)
+-->
+
+
+<head>
+    <meta charset="UTF-8">
+    <title>Grant Budget & Justification Toolkit</title>
+    <style>
+        :root {
+            --ust-purple: #512698;
+            --ust-grey: #999999;
+            --light-bg: #f4f4f4;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--light-bg); margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 40px; border-top: 8px solid var(--ust-purple); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        
+        h1 { color: var(--ust-purple); margin-bottom: 5px; }
+        h2 { background-color: var(--ust-purple); color: white; padding: 10px; margin-top: 30px; font-size: 1.2rem; border-radius: 4px; }
+        h3 { color: var(--ust-purple); border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-top: 20px; }
+        .subtitle { color: var(--ust-grey); font-style: italic; margin-bottom: 20px; }
+
+        .section { margin-bottom: 15px; border: 1px solid #e0e0e0; padding: 15px; border-radius: 4px; background: #fff; }
+        
+        label { display: block; font-weight: 600; margin-top: 10px; font-size: 0.9rem; }
+        .sub-label { font-weight: 400; color: #666; font-size: 0.85rem; margin-bottom: 5px; display: block; }
+        
+        input[type="text"], input[type="number"], select { width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 3px; box-sizing: border-box; }
+        input[type="checkbox"] { width: auto; margin-right: 10px; }
+        
+        .row { display: flex; gap: 15px; flex-wrap: wrap; }
+        .col { flex: 1; min-width: 200px; }
+        
+        button.add-btn { background: var(--ust-grey); color: white; border: none; padding: 5px 10px; cursor: pointer; font-size: 0.8rem; margin-top: 10px; border-radius: 3px; }
+        
+        .action-bar { display: flex; gap: 20px; margin-top: 40px; padding: 20px; background: #eee; border-radius: 5px; align-items: center; }
+        
+        button.generate-btn { flex: 2; background-color: var(--ust-purple); color: white; padding: 15px; font-size: 1.2rem; border: none; cursor: pointer; transition: background 0.2s; font-weight: bold; border-radius: 5px; }
+        button.generate-btn:hover { background-color: #3b1a6e; }
+        
+        .justification-group { flex: 1; display: flex; gap: 10px; }
+        button.justification-btn { flex: 1; background-color: #444; color: white; padding: 15px; font-size: 1rem; border: none; cursor: pointer; border-radius: 5px; }
+        button.justification-btn:hover { background-color: #222; }
+
+        .dynamic-wrapper { border-left: 4px solid #ddd; padding-left: 15px; margin-top: 15px; padding-bottom: 10px; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div style="background: linear-gradient(135deg, #512698 0%, #6b3bb0 100%); padding: 30px; margin: -40px -40px 30px -40px; border-radius: 0;">
+        <h1 style="color: white; margin: 0 0 8px 0; font-size: 2rem; font-weight: 600;">Grant Budget & Justification Toolkit</h1>
+        <p style="color: rgba(255,255,255,0.9); margin: 0; font-size: 1rem;">School of Engineering | University of St. Thomas (MN)</p>
+        <p style="color: rgba(255,255,255,0.75); margin: 8px 0 0 0; font-size: 0.75rem; font-style: italic;">Last Updated: 12/27/2025</p>
+    </div>
+    
+<div style="background: #f8f6fc; border-left: 4px solid #512698; padding: 15px 20px; margin: 0 0 25px 0; border-radius: 4px;">
+<p style="margin: 0; font-size: 0.9rem; color: #666; line-height: 1.6; font-style: italic; display: flex; align-items: center; gap: 12px;">
+    <img src="https://www.nsf.gov/themes/custom/nsf_theme/components/molecules/logo/logo-desktop.png" alt="NSF Logo" style="height: 40px; width: auto; flex-shrink: 0;">
+    <span>Development of this tool was supported by NSF EPIIC Award #2432471 to enhance faculty resources and streamline the proposal preparation process.</span>
+</p>
+</div>
+    
+    <div style="background: #fff8e1; border: 1px solid #ffd54f; border-left: 4px solid #ffa000; padding: 18px 20px; margin: 0 0 30px 0; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+        <p style="margin: 0 0 12px 0; font-weight: 600; color: #333; font-size: 1rem;">📋 Instructions:</p>
+        <p style="margin: 0 0 12px 0; line-height: 1.6; color: #444;">Enter budget information for each applicable expense category below. The tool will automatically calculate fringe benefits, annual escalation (3%), indirect costs (41.4%), and totals. Generate a detailed Excel budget spreadsheet and accompanying justification document in your preferred format (Word, Markdown or LaTex).</p>
+        <p style="margin: 0; font-style: italic; color: #666; font-size: 1rem; padding: 10px; background: white; border-radius: 3px;">
+            <strong style="color: #d84315;">⚠️ Note:</strong> This tool generates a preliminary budget and justification. Principal Investigators should carefully review all outputs for accuracy and completeness before submission. <strong>For NSF submission please make sure that the Budget Justification is no more than 5 pages.</strong>
+        </p>
+    </div>
+	
+    <div class="section">
+        <div class="row">
+            <div class="col">
+                <label>Project Duration (Years)</label>
+                <input type="number" id="duration" min="1" max="6" value="3" onchange="updateDurationUI()">
+            </div>
+            <div class="col">
+                <label>Start Year</label>
+                <input type="number" id="startYear" value="2026"> 
+            </div>
+            <div class="col">
+                <label>Annual Escalation (%)</label>
+                <input type="number" id="escalation" value="3" readonly>
+            </div>
+        </div>
+    </div>
+
+    <h2>1. Senior Personnel - PI</h2>
+    <div class="section">
+        <label>PI Name</label>
+        <input type="text" id="piName" placeholder="Dr. Jane Doe">
+        <div class="row">
+            <div class="col">
+                <label>Base Salary (9-mo)</label>
+                <input type="number" id="piBase" value="100000">
+            </div>
+        </div>
+        
+        <div style="margin-top:15px; background: #f9f9f9; padding:10px;">
+            <label>Academic Year: Course Buyouts</label>
+            <span class="sub-label">1 Course = 12.5% of Base Salary (Fringe 35%)</span>
+            <input type="checkbox" id="piAcadVar" onchange="toggleInputs('piAcad', this.checked)"> Varies by year?
+            <div id="piAcadFixed">
+                <input type="number" class="piAcadInput" value="1" placeholder="# of Courses">
+            </div>
+            <div id="piAcadVariable" class="hidden row"></div>
+        </div>
+
+        <div style="margin-top:15px; background: #f9f9f9; padding:10px;">
+            <label>Summer Effort (Months)</label>
+            <span class="sub-label">Fringe 8%</span>
+            <input type="checkbox" id="piSumVar" onchange="toggleInputs('piSum', this.checked)"> Varies by year?
+            <div id="piSumFixed">
+                <input type="number" class="piSumInput" value="1.0" max="3" step="0.1">
+            </div>
+            <div id="piSumVariable" class="hidden row"></div>
+        </div>
+    </div>
+
+    <h2>2. Senior Personnel - Co-PIs</h2>
+    <div class="section">
+        <label>Number of Co-PIs</label>
+        <input type="number" id="numCoPIs" value="0" min="0" onchange="renderCoPIs()">
+        <div id="copiContainer"></div>
+    </div>
+
+    <h2>3. Senior Personnel - Other Faculty</h2>
+    <div class="section">
+        <label>Number of Other Faculty</label>
+        <input type="number" id="numFac" value="0" min="0" onchange="renderOtherFaculty()">
+        <div id="facContainer"></div>
+    </div>
+
+    <h2>4. Other Personnel (12-mo)</h2>
+    <div class="section">
+        <label>Number of Staff (12-mo)</label>
+        <input type="number" id="numStaff" value="0" onchange="renderStaff()">
+        <div id="staffContainer"></div>
+
+        <label style="margin-top:20px;">Number of Post-Docs (12-mo)</label>
+        <input type="number" id="numPostDocs" value="0" onchange="renderPostDocs()">
+        <div id="postDocContainer"></div>
+    </div>
+
+    <h2>5. Student Assistants</h2>
+    <div class="section">
+        <h3>Graduate Students</h3>
+        <label>Number of Graduate Students</label>
+        <input type="number" id="numGrads" value="0" onchange="renderGrads()">
+        <div id="gradContainer"></div>
+        
+        <div class="row" style="margin-top:15px; background:#eef; padding:10px; border-radius:4px;">
+             <div class="col">
+                 <label>Tuition Remission (for YES above)</label>
+                 <span class="sub-label">Automatically calculated: 7 courses/yr @ Rate below</span>
+             </div>
+             <div class="col">
+                 <label>Rate per Course ($)</label>
+                 <input type="number" id="tuitionRate" value="4200">
+             </div>
+        </div>
+
+        <h3>Undergraduate Students</h3>
+        <label>Number of Undergraduate Students</label>
+        <input type="number" id="numUndergrads" value="0" onchange="renderUndergrads()">
+        <div id="undergradContainer"></div>
+    </div>
+
+    <h2>D. Equipment</h2>
+    <div class="section">
+        <label>Number of Unique Equipment Items (>$5,000)</label>
+        <input type="number" id="numEquip" value="0" onchange="renderEquip()">
+        <div id="equipContainer"></div>
+    </div>
+
+    <h2>E. Travel</h2>
+    <div class="section">
+        <h3>Domestic Travel</h3>
+        <div id="domesticTravelContainer"></div>
+        <button class="add-btn" onclick="addTravel('domestic')">+ Add Domestic Trip</button>
+        
+        <h3 style="margin-top:30px;">International Travel</h3>
+        <div id="intlTravelContainer"></div>
+        <button class="add-btn" onclick="addTravel('intl')">+ Add International Trip</button>
+    </div>
+
+    <h2>F. Participant Support Costs</h2>
+    <div class="section">
+        <div class="row">
+            <div class="col"><label>Stipends ($/yr)</label><input type="number" id="partStipend" value="0"></div>
+            <div class="col"><label>Travel ($/yr)</label><input type="number" id="partTravel" value="0"></div>
+            <div class="col"><label>Subsistence ($/yr)</label><input type="number" id="partSub" value="0"></div>
+            <div class="col"><label>Other/Tuition ($/yr)</label><input type="number" id="partOther" value="0"></div>
+        </div>
+    </div>
+
+    <h2>G. Other Direct Costs</h2>
+    <div class="section">
+        <label>Materials & Supplies ($/yr)</label>
+        <input type="number" id="costMaterials" value="2000">
+        
+        <label>Publication/Documentation/Dissemination ($/yr)</label>
+        <input type="number" id="costPubs" value="1000">
+        
+        <label>Consultant Services ($/yr)</label>
+        <input type="number" id="costConsultants" value="0">
+        
+        <label>Computer Services ($/yr)</label>
+        <input type="number" id="costComputer" value="0">
+
+        <h3 style="margin-top:20px;">Subawards</h3>
+        <input type="checkbox" id="hasSubawards" onchange="toggleSubawards()"> Yes, there are subawards
+        <div id="subawardDetails" class="hidden" style="margin-top:10px; padding:10px; border:1px solid #ccc;">
+            <div class="row">
+                <div class="col"><label>Subawardee Name</label><input type="text" id="subName" placeholder="University of X"></div>
+            </div>
+            <div class="row">
+                <div class="col">
+                     <label>Amount Varies?</label>
+                     <input type="checkbox" id="subVar" onchange="toggleInputs('sub', this.checked)">
+                </div>
+            </div>
+            <div id="subFixed">
+                <label>Annual Amount ($)</label>
+                <input type="number" class="subInput" value="0">
+            </div>
+            <div id="subVariable" class="hidden row"></div>
+            <span class="sub-label" style="color:red; margin-top:5px;">Note: Indirect Costs will automatically exclude amounts >$50k of total subaward.</span>
+        </div>
+    </div>
+
+    <div class="action-bar">
+        <button class="generate-btn" onclick="generateExcel()">Download Budget (.xls)</button>
+        <div class="justification-group">
+            <select id="justFormat">
+                <option value="docx">Word (.doc)</option>
+                <option value="md">Markdown (.md)</option>
+                <option value="tex">LaTeX (.tex)</option>
+            </select>
+            <button class="justification-btn" onclick="generateJustification()">Get Justification</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- UI Logic ---
+    document.getElementById('startYear').value = 2026;
+
+    function updateDurationUI() {
+        const d = parseInt(document.getElementById('duration').value);
+        renderDynamicYears('piAcad', d);
+        renderDynamicYears('piSum', d);
+        renderDynamicYears('sub', d);
+        renderCoPIs();
+        renderOtherFaculty();
+    }
+
+    function toggleInputs(prefix, isVar) {
+        document.getElementById(prefix + 'Fixed').style.display = isVar ? 'none' : 'block';
+        const varDiv = document.getElementById(prefix + 'Variable');
+        varDiv.style.display = isVar ? 'flex' : 'none';
+        if (isVar) renderDynamicYears(prefix, parseInt(document.getElementById('duration').value));
+    }
+
+    function renderDynamicYears(prefix, duration) {
+        const container = document.getElementById(prefix + 'Variable');
+        container.innerHTML = '';
+        const label = prefix.includes('sub') ? 'Amount' : (prefix.includes('Acad') ? 'Courses' : 'Months');
+        for(let i=1; i<=duration; i++) {
+            container.innerHTML += `<div class="col"><label>Yr ${i} ${label}</label><input type="number" class="${prefix}InputVar" step="0.1" value="0"></div>`;
+        }
+    }
+
+    // --- Personnel Renderers ---
+    function renderCoPIs() {
+        const count = parseInt(document.getElementById('numCoPIs').value);
+        const container = document.getElementById('copiContainer');
+        container.innerHTML = '';
+        const dur = parseInt(document.getElementById('duration').value);
+        for(let i=0; i<count; i++) container.innerHTML += createFacultyHTML(i, 'Co-PI', 'copi', dur);
+    }
+
+    function renderOtherFaculty() {
+        const count = parseInt(document.getElementById('numFac').value);
+        const container = document.getElementById('facContainer');
+        container.innerHTML = '';
+        const dur = parseInt(document.getElementById('duration').value);
+        for(let i=0; i<count; i++) container.innerHTML += createFacultyHTML(i, 'Senior Fac', 'fac', dur);
+    }
+
+    function createFacultyHTML(index, label, type, duration) {
+        return `
+        <div class="dynamic-wrapper">
+            <div class="row">
+                <div class="col"><input type="text" id="${type}Name_${index}" placeholder="${label} Name"></div>
+                <div class="col"><input type="number" id="${type}Base_${index}" value="100000" placeholder="Base Salary"></div>
+            </div>
+            <div class="row" style="margin-top:5px;">
+                <div class="col">
+                    <label>Acad Buyout (Courses) (35% Fringe)</label>
+                    <input type="number" id="${type}Acad_${index}" value="0" step="0.5">
+                </div>
+                <div class="col">
+                    <label>Summer Months (8% Fringe)</label>
+                    <input type="number" id="${type}Sum_${index}" value="0" step="0.1">
+                </div>
+            </div>
+        </div>`;
+    }
+
+    function renderStaff() {
+        const count = document.getElementById('numStaff').value;
+        let html = '';
+        for(let i=0; i<count; i++) html += `<div class="dynamic-wrapper"><div class="row"><div class="col"><input type="text" id="staffName_${i}" placeholder="Staff Name"></div><div class="col"><label>Base Salary</label><input type="number" id="staffBase_${i}" value="80000" placeholder="Base Salary"></div><div class="col"><label>% Effort on Project</label><input type="number" id="staffEffort_${i}" value="100" min="0" max="100" placeholder="% Effort"></div></div></div>`;
+        document.getElementById('staffContainer').innerHTML = html;
+    }
+
+    function renderPostDocs() {
+        const count = document.getElementById('numPostDocs').value;
+        let html = '';
+        for(let i=0; i<count; i++) html += `<div class="dynamic-wrapper"><div class="row"><div class="col"><input type="text" id="pdName_${i}" placeholder="PostDoc Name"></div><div class="col"><input type="number" id="pdBase_${i}" value="80000" placeholder="Base Salary"></div></div></div>`;
+        document.getElementById('postDocContainer').innerHTML = html;
+    }
+
+    function renderGrads() {
+        const count = document.getElementById('numGrads').value;
+        let html = '';
+        for(let i=0; i<count; i++) html += `<div class="dynamic-wrapper"><div class="row"><div class="col"><input type="text" id="gradName_${i}" placeholder="Name"></div><div class="col"><label>Monthly Stipend</label><input type="number" id="gradStipend_${i}" value="2500"></div><div class="col"><label>Tuition Included?</label><select id="gradTuition_${i}"><option value="1">Yes</option><option value="0">No</option></select></div></div></div>`;
+        document.getElementById('gradContainer').innerHTML = html;
+    }
+
+    function renderUndergrads() {
+        const count = document.getElementById('numUndergrads').value;
+        let html = '';
+        for(let i=0; i<count; i++) html += `<div class="dynamic-wrapper"><div class="row"><div class="col"><input type="text" id="ugName_${i}" placeholder="Name"></div><div class="col"><label>Hourly Rate</label><input type="number" id="ugRate_${i}" value="19.50" step="0.5"></div><div class="col"><label>Hrs/Wk (Acad)</label><input type="number" id="ugHrsAcad_${i}" value="10" max="20"></div><div class="col"><label>Hrs/Wk (Summer)</label><input type="number" id="ugHrsSum_${i}" value="40" max="40"></div></div></div>`;
+        document.getElementById('undergradContainer').innerHTML = html;
+    }
+
+    function renderEquip() {
+        const count = document.getElementById('numEquip').value;
+        let html = '';
+        for(let i=0; i<count; i++) html += `<div class="dynamic-wrapper"><div class="row"><div class="col"><input type="text" id="equipName_${i}" placeholder="Item Description"></div><div class="col"><input type="number" id="equipCost_${i}" value="5000" placeholder="Cost ($)"></div></div></div>`;
+        document.getElementById('equipContainer').innerHTML = html;
+    }
+
+    let tripCount = { domestic: 0, intl: 0 };
+    function addTravel(type) {
+        const container = document.getElementById(type + 'TravelContainer');
+        const i = tripCount[type]++;
+        const duration = parseInt(document.getElementById('duration').value);
+        let yearCheckboxes = '<label style="font-weight:600; margin-right:10px;">Trip occurs in:</label>';
+        for(let y=1; y<=duration; y++) {
+            yearCheckboxes += `<label style="margin-right:15px; font-weight:normal;"><input type="checkbox" class="${type}Year_${i}" data-year="${y}" checked> Year ${y}</label>`;
+        }
+        container.insertAdjacentHTML('beforeend', `<div class="dynamic-wrapper" style="background:#fff;"><input type="text" id="${type}Desc_${i}" placeholder="Trip Description" style="font-weight:bold;"><div class="row"><div class="col" style="flex: 3;">${yearCheckboxes}</div></div><div class="row"><div class="col"><label># Travelers</label><input type="number" id="${type}Num_${i}" value="1"></div><div class="col"><label>Days</label><input type="number" id="${type}Days_${i}" value="3"></div><div class="col"><label>Airfare ($)</label><input type="number" id="${type}Air_${i}" value="500"></div></div><div class="row"><div class="col"><label>Ground ($)</label><input type="number" id="${type}Ground_${i}" value="50"></div><div class="col"><label>Hotel ($/night)</label><input type="number" id="${type}Hotel_${i}" value="200"></div><div class="col"><label>Per Diem ($/day)</label><input type="number" id="${type}Food_${i}" value="60"></div><div class="col"><label>Registration ($)</label><input type="number" id="${type}Reg_${i}" value="500"></div><div class="col"><label>Other ($)</label><input type="number" id="${type}Other_${i}" value="0"></div></div></div>`);
+    }
+    function toggleSubawards() {
+        const show = document.getElementById('hasSubawards').checked;
+        document.getElementById('subawardDetails').classList.toggle('hidden', !show);
+    }
+
+    // --- MAIN LOGIC: EXCEL GENERATION (XML) ---
+    function generateExcel() {
+        const duration = parseInt(document.getElementById('duration').value);
+        let xml = '<?xml version="1.0"?>\n<?mso-application progid="Excel.Sheet"?>\n<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">\n';
+        
+        xml += '<Styles><Style ss:ID="Default" ss:Name="Normal"><Alignment ss:Vertical="Bottom"/><Borders/><Font ss:FontName="Calibri" ss:Size="11"/><Interior/><NumberFormat/><Protection/></Style>';
+        xml += '<Style ss:ID="Header"><Font ss:FontName="Calibri" ss:Size="12" ss:Color="#FFFFFF" ss:Bold="1"/><Interior ss:Color="#512698" ss:Pattern="Solid"/></Style>';
+        xml += '<Style ss:ID="SubHeader"><Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1"/><Interior ss:Color="#E1D5F5" ss:Pattern="Solid"/></Style>';
+        xml += '<Style ss:ID="Currency"><NumberFormat ss:Format="Currency"/></Style>';
+        xml += '<Style ss:ID="Bold"><Font ss:Bold="1"/></Style>';
+        xml += '<Style ss:ID="Total"><Font ss:Bold="1"/><Interior ss:Color="#FFFFCC" ss:Pattern="Solid"/><NumberFormat ss:Format="Currency"/></Style>';
+        xml += '<Style ss:ID="DarkPurpleTotal"><Font ss:FontName="Calibri" ss:Size="11" ss:Color="#FFFFFF" ss:Bold="1"/><Interior ss:Color="#512698" ss:Pattern="Solid"/><NumberFormat ss:Format="&quot;$&quot;#,##0.00"/></Style></Styles>';
+
+        xml += '<Worksheet ss:Name="Budget Summary"><Table>';
+        xml += '<Column ss:Width="200"/>';
+        for(let i=0; i<=duration; i++) xml += '<Column ss:Width="85"/>'; 
+        
+        // Header
+        xml += '<Row ss:StyleID="Header"><Cell><Data ss:Type="String">Category</Data></Cell>';
+        let startYear = parseInt(document.getElementById('startYear').value);
+        for(let i=0; i<duration; i++) xml += `<Cell><Data ss:Type="String">Year ${startYear+i}</Data></Cell>`;
+        xml += '<Cell><Data ss:Type="String">Total</Data></Cell></Row>';
+
+        let currentRow = 2; // Track current row for formula references
+        let salaryRows = []; // Store object: {row: 5, type: 'fac-acad' | 'fac-sum' | 'staff' | 'student'} 
+        let directCostSubtotals = []; // Array of row indices for Section Totals (A, B, C...)
+
+        function addRow(label, values, isCurrency=true, styleID="") {
+            let r = `<Row${styleID ? ' ss:StyleID="'+styleID+'"' : ''}><Cell><Data ss:Type="String">${label}</Data></Cell>`;
+            values.forEach(v => {
+                let formula = v.formula ? ` ss:Formula="${v.formula}"` : '';
+                let type = isCurrency ? 'Number' : 'String';
+                let style = isCurrency ? (styleID ? '' : ' ss:StyleID="Currency"') : '';
+                r += `<Cell${style}${formula}><Data ss:Type="${type}">${v.val}</Data></Cell>`;
+            });
+            r += '</Row>';
+            currentRow++;
+            return r;
+        }
+
+        // Helper: Create Escalated Row Data
+        function getEscalatedRow(baseVal, formulaStr, isUndergrad=false) {
+            let row = [];
+            if(isUndergrad) {
+                // Year 1 is formula based on inputs
+                row.push({val: 0, formula: `=${formulaStr}`}); // Year 1
+            } else {
+                row.push({val: 0, formula: `=${baseVal}*${formulaStr}`}); // Year 1
+            }
+            // Escalation 3%
+            for(let i=1; i<duration; i++) row.push({val: 0, formula: `=RC[-1]*1.03`});
+            row.push({val:0, formula: `=SUM(RC[-${duration}]:RC[-1])`});
+            return row;
+        }
+
+        // --- A. SENIOR PERSONNEL ---
+        xml += addRow("A. Senior Personnel", [], false, "SubHeader");
+        let startRowA = currentRow;
+
+        // PI
+        let piBase = document.getElementById('piBase').value;
+        let piName = document.getElementById('piName').value || "PI";
+        
+        // PI Acad (Buyout 12.5% of base)
+        let piAcadData = [];
+        if(!document.getElementById('piAcadVar').checked) {
+             let courses = document.querySelector('.piAcadInput').value;
+             piAcadData = getEscalatedRow(piBase, `0.125*${courses}`);
+        } else {
+             let inputs = document.querySelectorAll('.piAcadInputVar');
+             for(let i=0; i<duration; i++) {
+                 let esc = Math.pow(1.03, i);
+                 piAcadData.push({val:0, formula: `=${piBase}*${esc.toFixed(4)}*0.125*${inputs[i].value}`});
+             }
+             piAcadData.push({val:0, formula: `=SUM(RC[-${duration}]:RC[-1])`});
+        }
+        xml += addRow(`${piName} (Academic)`, piAcadData);
+        salaryRows.push({row: currentRow-1, type: 'fac-acad', name: piName + " (Acad)"});
+
+        // PI Summer (1/9th per month)
+        let piSumData = [];
+        if(!document.getElementById('piSumVar').checked) {
+            let mo = document.querySelector('.piSumInput').value;
+            piSumData = getEscalatedRow(piBase, `(1/9)*${mo}`);
+        } else {
+            let inputs = document.querySelectorAll('.piSumInputVar');
+            for(let i=0; i<duration; i++) {
+                 let esc = Math.pow(1.03, i);
+                 piSumData.push({val:0, formula: `=${piBase}*${esc.toFixed(4)}/9*${inputs[i].value}`});
+            }
+            piSumData.push({val:0, formula: `=SUM(RC[-${duration}]:RC[-1])`});
+        }
+        xml += addRow(`${piName} (Summer)`, piSumData);
+        salaryRows.push({row: currentRow-1, type: 'fac-sum', name: piName + " (Sum)"});
+
+        // Co-PIs
+        let nCo = document.getElementById('numCoPIs').value;
+        for(let k=0; k<nCo; k++) {
+            let nm = document.getElementById(`copiName_${k}`).value || `Co-PI ${k+1}`;
+            let bs = document.getElementById(`copiBase_${k}`).value;
+            
+            // Acad
+            xml += addRow(`${nm} (Acad)`, getEscalatedRow(bs, `0.125*${document.getElementById(`copiAcad_${k}`).value}`));
+            salaryRows.push({row: currentRow-1, type: 'fac-acad', name: nm + " (Acad)"});
+            
+            // Summer
+            xml += addRow(`${nm} (Sum)`, getEscalatedRow(bs, `(1/9)*${document.getElementById(`copiSum_${k}`).value}`));
+            salaryRows.push({row: currentRow-1, type: 'fac-sum', name: nm + " (Sum)"});
+        }
+        // Other Faculty
+        let nFac = document.getElementById('numFac').value;
+        for(let k=0; k<nFac; k++) {
+            let nm = document.getElementById(`facName_${k}`).value || `Fac ${k+1}`;
+            let bs = document.getElementById(`facBase_${k}`).value;
+            
+            xml += addRow(`${nm} (Acad)`, getEscalatedRow(bs, `0.125*${document.getElementById(`facAcad_${k}`).value}`));
+            salaryRows.push({row: currentRow-1, type: 'fac-acad', name: nm + " (Acad)"});
+            
+            xml += addRow(`${nm} (Sum)`, getEscalatedRow(bs, `(1/9)*${document.getElementById(`facSum_${k}`).value}`));
+            salaryRows.push({row: currentRow-1, type: 'fac-sum', name: nm + " (Sum)"});
+        }
+
+        // Subtotal A
+        let subA = [];
+        for(let i=0; i<duration; i++) subA.push({val:0, formula:`=SUM(R${startRowA}C:R${currentRow-1}C)`});
+        subA.push({val:0, formula:`=SUM(RC[-${duration}]:RC[-1])`});
+        xml += addRow("Total Senior Personnel", subA, true, "DarkPurpleTotal");
+        directCostSubtotals.push(currentRow-1);
+
+        // --- B. OTHER PERSONNEL ---
+        xml += addRow("B. Other Personnel", [], false, "SubHeader");
+        let startRowB = currentRow;
+        
+        // Staff
+        let nSt = document.getElementById('numStaff').value;
+        for(let k=0; k<nSt; k++) {
+            let nm = document.getElementById(`staffName_${k}`).value || `Staff ${k+1}`;
+            let effort = (parseFloat(document.getElementById(`staffEffort_${k}`).value) || 100) / 100;
+            xml += addRow(nm, getEscalatedRow(document.getElementById(`staffBase_${k}`).value, effort));
+            salaryRows.push({row: currentRow-1, type: 'staff', name: nm});
+        }
+        // Post-Docs
+        let nPd = document.getElementById('numPostDocs').value;
+        for(let k=0; k<nPd; k++) {
+            let nm = document.getElementById(`pdName_${k}`).value || `PostDoc ${k+1}`;
+            xml += addRow(nm, getEscalatedRow(document.getElementById(`pdBase_${k}`).value, `1`));
+            salaryRows.push({row: currentRow-1, type: 'staff', name: nm});
+        }
+        // Grads
+        let nGr = document.getElementById('numGrads').value;
+        for(let k=0; k<nGr; k++) {
+            let nm = document.getElementById(`gradName_${k}`).value || `Grad ${k+1}`;
+            xml += addRow(nm, getEscalatedRow(document.getElementById(`gradStipend_${k}`).value * 12, `1`));
+            salaryRows.push({row: currentRow-1, type: 'student', name: nm});
+        }
+        // Undergrads - Split into Academic and Summer for different fringe rates
+        let nUg = document.getElementById('numUndergrads').value;
+        for(let k=0; k<nUg; k++) {
+            let nm = document.getElementById(`ugName_${k}`).value || `Undergrad ${k+1}`;
+            let rate = document.getElementById(`ugRate_${k}`).value;
+            let ha = document.getElementById(`ugHrsAcad_${k}`).value;
+            let hs = document.getElementById(`ugHrsSum_${k}`).value;
+            
+            // Academic Year: rate * (ha * 36 weeks) - 0% fringe
+            let formStrAcad = `${rate}*(${ha}*36)`;
+            xml += addRow(`${nm} (Academic)`, getEscalatedRow(0, formStrAcad, true));
+            salaryRows.push({row: currentRow-1, type: 'ug-acad', name: nm + ' (Acad)'});
+            
+            // Summer: rate * (hs * 12 weeks) - 8% fringe
+            let formStrSum = `${rate}*(${hs}*12)`;
+            xml += addRow(`${nm} (Summer)`, getEscalatedRow(0, formStrSum, true));
+            salaryRows.push({row: currentRow-1, type: 'ug-sum', name: nm + ' (Sum)'});
+        }
+        
+        // Subtotal B
+        let subB = [];
+        for(let i=0; i<duration; i++) subB.push({val:0, formula:`=SUM(R${startRowB}C:R${currentRow-1}C)`});
+        subB.push({val:0, formula:`=SUM(RC[-${duration}]:RC[-1])`});
+        xml += addRow("Total Other Personnel", subB, true, "DarkPurpleTotal");
+        directCostSubtotals.push(currentRow-1);
+
+        // --- C. FRINGE BENEFITS ---
+        xml += addRow("C. Fringe Benefits", [], false, "SubHeader");
+        let startRowC = currentRow;
+        
+        // Detailed Line Items based on Type
+        salaryRows.forEach(item => {
+            let rate = 0;
+            // CORRECTED LOGIC:
+            if(item.type === 'fac-acad' || item.type === 'staff') rate = 0.35; // 35% for AY and Staff
+            if(item.type === 'fac-sum' || item.type === 'student') rate = 0.08; // 8% for Faculty Summer and Grad Students
+            if(item.type === 'ug-acad') rate = 0.00; // 0% for Undergrad Academic Year
+            if(item.type === 'ug-sum') rate = 0.08; // 8% for Undergrad Summer
+            
+            let label = `Fringe - ${item.name} (${(rate*100).toFixed(0)}%)`;
+            let fRows = [];
+            for(let i=0; i<duration; i++) fRows.push({val:0, formula:`=R${item.row}C*${rate}`});
+            fRows.push({val:0, formula:`=SUM(RC[-${duration}]:RC[-1])`});
+            xml += addRow(label, fRows);
+        });
+
+        // Subtotal C
+        let subC = [];
+        for(let i=0; i<duration; i++) subC.push({val:0, formula:`=SUM(R${startRowC}C:R${currentRow-1}C)`});
+        subC.push({val:0, formula:`=SUM(RC[-${duration}]:RC[-1])`});
+        xml += addRow("Total Fringe Benefits", subC, true, "DarkPurpleTotal");
+        directCostSubtotals.push(currentRow-1);
+
+        // --- D. EQUIPMENT ---
+        xml += addRow("D. Equipment", [], false, "SubHeader");
+        let startRowD = currentRow;
+        let nEq = document.getElementById('numEquip').value;
+        if(nEq == 0) xml += addRow("None", getEscalatedRow(0,`0`));
+        for(let k=0; k<nEq; k++) {
+            let nm = document.getElementById(`equipName_${k}`).value || `Item ${k+1}`;
+            let cost = document.getElementById(`equipCost_${k}`).value;
+            let rData = [{val:cost}]; // Year 1 only
+            for(let i=1; i<duration; i++) rData.push({val:0});
+            rData.push({val:0, formula:`=SUM(RC[-${duration}]:RC[-1])`});
+            xml += addRow(nm, rData);
+        }
+        let rowEquipTotal = currentRow; 
+        let subD = [];
+        for(let i=0; i<duration; i++) subD.push({val:0, formula:`=SUM(R${startRowD}C:R${currentRow-1}C)`});
+        subD.push({val:0, formula:`=SUM(RC[-${duration}]:RC[-1])`});
+        xml += addRow("Total Equipment", subD, true, "DarkPurpleTotal");
+        directCostSubtotals.push(currentRow-1);
+
+        // --- E. TRAVEL ---
+        xml += addRow("E. Travel", [], false, "SubHeader");
+        
+        // Calculate travel costs by year
+        let domCostsByYear = new Array(duration).fill(0);
+        let intlCostsByYear = new Array(duration).fill(0);
+        
+        // Calc Domestic
+        for(let i=0; i<tripCount.domestic; i++) {
+             let n = parseFloat(document.getElementById(`domesticNum_${i}`).value) || 0;
+             let d = parseFloat(document.getElementById(`domesticDays_${i}`).value) || 0;
+             let cost = (parseFloat(document.getElementById(`domesticAir_${i}`).value)||0) + 
+                        (parseFloat(document.getElementById(`domesticGround_${i}`).value)||0) +
+                        (parseFloat(document.getElementById(`domesticReg_${i}`).value)||0) +
+                        (parseFloat(document.getElementById(`domesticOther_${i}`).value)||0) +
+                        (d * ((parseFloat(document.getElementById(`domesticHotel_${i}`).value)||0) + (parseFloat(document.getElementById(`domesticFood_${i}`).value)||0)));
+             let totalCost = n * cost;
+             
+             // Get selected years from checkboxes
+             const yearCheckboxes = document.querySelectorAll(`.domesticYear_${i}`);
+             yearCheckboxes.forEach(checkbox => {
+                 if(checkbox.checked) {
+                     let yearNum = parseInt(checkbox.dataset.year) - 1;
+                     domCostsByYear[yearNum] += totalCost * Math.pow(1.03, yearNum);
+                 }
+             });
+        }
+        
+        // Calc Intl
+        for(let i=0; i<tripCount.intl; i++) {
+             let n = parseFloat(document.getElementById(`intlNum_${i}`).value) || 0;
+             let d = parseFloat(document.getElementById(`intlDays_${i}`).value) || 0;
+             let cost = (parseFloat(document.getElementById(`intlAir_${i}`).value)||0) + 
+                        (parseFloat(document.getElementById(`intlGround_${i}`).value)||0) +
+                        (parseFloat(document.getElementById(`intlReg_${i}`).value)||0) +
+                        (parseFloat(document.getElementById(`intlOther_${i}`).value)||0) +
+                        (d * ((parseFloat(document.getElementById(`intlHotel_${i}`).value)||0) + (parseFloat(document.getElementById(`intlFood_${i}`).value)||0)));
+             let totalCost = n * cost;
+             
+             // Get selected years from checkboxes
+             const yearCheckboxes = document.querySelectorAll(`.intlYear_${i}`);
+             yearCheckboxes.forEach(checkbox => {
+                 if(checkbox.checked) {
+                     let yearNum = parseInt(checkbox.dataset.year) - 1;
+                     intlCostsByYear[yearNum] += totalCost * Math.pow(1.03, yearNum);
+                 }
+             });
+        }
+        
+        // Create rows with year-specific values
+        let domData = [];
+        for(let i=0; i<duration; i++) domData.push({val: domCostsByYear[i]});
+        domData.push({val:0, formula:`=SUM(RC[-${duration}]:RC[-1])`});
+        xml += addRow("Domestic Travel", domData);
+        
+        let intlData = [];
+        for(let i=0; i<duration; i++) intlData.push({val: intlCostsByYear[i]});
+        intlData.push({val:0, formula:`=SUM(RC[-${duration}]:RC[-1])`});
+        xml += addRow("International Travel", intlData);
+        
+        // Subtotal E
+        let subE = [];
+        for(let i=0; i<duration; i++) subE.push({val:0, formula:`=R[-2]C+R[-1]C`});
+        subE.push({val:0, formula:`=SUM(RC[-${duration}]:RC[-1])`});
+        xml += addRow("Total Travel", subE, true, "DarkPurpleTotal");
+        directCostSubtotals.push(currentRow-1);
+
+        // --- F. PARTICIPANT SUPPORT ---
+        xml += addRow("F. Participant Support Costs", [], false, "SubHeader");
+        let startRowF = currentRow;
+        xml += addRow("Stipends", getEscalatedRow(document.getElementById('partStipend').value, `1`));
+        xml += addRow("Travel", getEscalatedRow(document.getElementById('partTravel').value, `1`));
+        xml += addRow("Subsistence", getEscalatedRow(document.getElementById('partSub').value, `1`));
+        xml += addRow("Other", getEscalatedRow(document.getElementById('partOther').value, `1`));
+        
+        let subF = [];
+        for(let i=0; i<duration; i++) subF.push({val:0, formula:`=SUM(R${startRowF}C:R${currentRow-1}C)`});
+        subF.push({val:0, formula:`=SUM(RC[-${duration}]:RC[-1])`});
+        xml += addRow("Total Participant Support", subF, true, "DarkPurpleTotal");
+        let rowPartTotal = currentRow-1;
+        directCostSubtotals.push(currentRow-1);
+
+        // --- G. OTHER DIRECT ---
+        xml += addRow("G. Other Direct Costs", [], false, "SubHeader");
+        let startRowG = currentRow;
+        xml += addRow("Materials & Supplies", getEscalatedRow(document.getElementById('costMaterials').value, `1`));
+        xml += addRow("Publication Costs", getEscalatedRow(document.getElementById('costPubs').value, `1`));
+        xml += addRow("Consultant Services", getEscalatedRow(document.getElementById('costConsultants').value, `1`));
+        xml += addRow("Computer Services", getEscalatedRow(document.getElementById('costComputer').value, `1`));
+        
+        // Tuition
+        let gradTuitionCount = 0;
+        for(let k=0; k<nGr; k++) if(document.getElementById(`gradTuition_${k}`).value == "1") gradTuitionCount++;
+        let tCost = gradTuitionCount * document.getElementById('tuitionRate').value * 7;
+        let tRow = getEscalatedRow(tCost, `1.03`); // Tuition increases
+        xml += addRow("Tuition Remission", tRow);
+        let rowTuition = currentRow-1;
+
+        // Subawards
+        let subRow = [];
+        if(document.getElementById('hasSubawards').checked) {
+             if(!document.getElementById('subVar').checked) {
+                 let val = document.querySelector('.subInput').value;
+                 for(let i=0; i<duration; i++) subRow.push({val:val});
+             } else {
+                 let inputs = document.querySelectorAll('.subInputVar');
+                 for(let i=0; i<duration; i++) subRow.push({val:inputs[i].value});
+             }
+        } else {
+             for(let i=0; i<duration; i++) subRow.push({val:0});
+        }
+        subRow.push({val:0, formula:`=SUM(RC[-${duration}]:RC[-1])`});
+        xml += addRow("Subawards", subRow);
+        
+        let subG = [];
+        for(let i=0; i<duration; i++) subG.push({val:0, formula:`=SUM(R${startRowG}C:R${currentRow-1}C)`});
+        subG.push({val:0, formula:`=SUM(RC[-${duration}]:RC[-1])`});
+        xml += addRow("Total Other Direct Costs", subG, true, "DarkPurpleTotal");
+        directCostSubtotals.push(currentRow-1);
+
+        // --- TOTAL DIRECT COSTS ---
+        xml += '<Row ss:Height="5"></Row>'; currentRow++;
+        let tdcData = [];
+        // Fixed Summation logic: Sum specific subtotal rows
+        let tdcFormula = "=" + directCostSubtotals.map(r => `R${r}C`).join("+");
+        for(let i=0; i<duration; i++) tdcData.push({val:0, formula:tdcFormula});
+        tdcData.push({val:0, formula:`=SUM(RC[-${duration}]:RC[-1])`});
+        xml += addRow("H. TOTAL DIRECT COSTS", tdcData, true, "Total");
+        let rowTDC = currentRow-1;
+
+        // --- INDIRECT COSTS ---
+        xml += addRow("I. Indirect Costs (MTDC)", [], false, "SubHeader");
+        xml += addRow("Exclusions:", [], false);
+        
+        // Exclusions: Equipment, Tuition, Participant Support, Subaward > 50k
+        let exEq = [], exTu = [], exPart = [], exSub = [];
+        
+        for(let i=0; i<duration; i++) {
+            exEq.push({val:0, formula:`=-R${rowEquipTotal}C`});
+            exTu.push({val:0, formula:`=-R${rowTuition}C`});
+            exPart.push({val:0, formula:`=-R${rowPartTotal}C`});
+            
+            // Subaward Calc
+            let yrSub = parseFloat(subRow[i].val) || 0;
+            let prevSum = 0;
+            for(let p=0; p<i; p++) prevSum += (parseFloat(subRow[p].val)||0);
+            let currentCum = prevSum + yrSub;
+            
+            let exempt = 0;
+            if(prevSum >= 50000) exempt = 0;
+            else if(currentCum > 50000) exempt = 50000 - prevSum;
+            else exempt = yrSub;
+            
+            let exclusion = yrSub - exempt;
+            exSub.push({val: -exclusion});
+        }
+        [exEq, exTu, exPart, exSub].forEach(arr => arr.push({val:0, formula:`=SUM(RC[-${duration}]:RC[-1])`}));
+
+        xml += addRow(" - Equipment", exEq);
+        xml += addRow(" - Tuition", exTu);
+        xml += addRow(" - Participant Support", exPart);
+        xml += addRow(" - Subawards Excess (>$50k)", exSub);
+        let startExcl = currentRow - 4;
+
+        // MTDC Base
+        let mtdcData = [];
+        for(let i=0; i<duration; i++) mtdcData.push({val:0, formula:`=R${rowTDC}C+SUM(R${startExcl}C:R${currentRow-1}C)`});
+        mtdcData.push({val:0, formula:`=SUM(RC[-${duration}]:RC[-1])`});
+        xml += addRow("Modified Total Direct Costs (MTDC)", mtdcData, true, "DarkPurpleTotal");
+
+        // IDC
+        let idcData = [];
+        for(let i=0; i<duration; i++) idcData.push({val:0, formula:`=R[-1]C*0.414`});
+        idcData.push({val:0, formula:`=SUM(RC[-${duration}]:RC[-1])`});
+        xml += addRow("Indirect Costs (41.4%)", idcData);
+
+        // TOTAL
+        let totData = [];
+        for(let i=0; i<duration; i++) totData.push({val:0, formula:`=R${rowTDC}C+R[-1]C`});
+        totData.push({val:0, formula:`=SUM(RC[-${duration}]:RC[-1])`});
+        xml += addRow("J. TOTAL PROJECT COST", totData, true, "Total");
+
+        xml += '</Table></Worksheet>';
+
+        // Attach Travel Sheets
+        xml += generateTravelSheet('DOMESTICTRAVEL', 'domestic');
+        xml += generateTravelSheet('INTLTRAVEL', 'intl');
+        
+        xml += '</Workbook>';
+        
+        downloadFile(xml, 'NSF_Budget.xls', 'application/vnd.ms-excel');
+    }
+
+	function generateTravelSheet(sheetName, type) {
+        let str = `<Worksheet ss:Name="${sheetName}"><Table>`;
+        str += '<Column ss:Width="200"/><Column ss:Width="100"/><Column ss:Width="80"/><Column ss:Width="80"/><Column ss:Width="80"/><Column ss:Width="80"/><Column ss:Width="80"/><Column ss:Width="80"/><Column ss:Width="80"/><Column ss:Width="80"/>';
+        str += '<Row ss:StyleID="Header"><Cell><Data ss:Type="String">Description</Data></Cell><Cell><Data ss:Type="String">Year(s)</Data></Cell><Cell><Data ss:Type="String">Travelers</Data></Cell><Cell><Data ss:Type="String">Days</Data></Cell><Cell><Data ss:Type="String">Airfare</Data></Cell><Cell><Data ss:Type="String">Ground</Data></Cell><Cell><Data ss:Type="String">Hotel/Nt</Data></Cell><Cell><Data ss:Type="String">Food</Data></Cell><Cell><Data ss:Type="String">Registration</Data></Cell><Cell><Data ss:Type="String">Other Cost/Traveller</Data></Cell><Cell><Data ss:Type="String">Total</Data></Cell></Row>';
+        
+        for(let i=0; i<tripCount[type]; i++) {
+             let d = document.getElementById(`${type}Desc_${i}`).value || "Trip";
+             
+             // Get selected years
+             let selectedYears = [];
+             const yearCheckboxes = document.querySelectorAll(`.${type}Year_${i}`);
+             yearCheckboxes.forEach(checkbox => {
+                 if(checkbox.checked) {
+                     selectedYears.push(parseInt(checkbox.dataset.year));
+                 }
+             });
+             let yearsText = selectedYears.length > 0 ? selectedYears.join(', ') : 'None';
+             
+             str += `<Row><Cell><Data ss:Type="String">${d}</Data></Cell>
+             <Cell><Data ss:Type="String">${yearsText}</Data></Cell>
+             <Cell><Data ss:Type="Number">${document.getElementById(`${type}Num_${i}`).value}</Data></Cell>
+             <Cell><Data ss:Type="Number">${document.getElementById(`${type}Days_${i}`).value}</Data></Cell>
+             <Cell><Data ss:Type="Number">${document.getElementById(`${type}Air_${i}`).value}</Data></Cell>
+             <Cell><Data ss:Type="Number">${document.getElementById(`${type}Ground_${i}`).value}</Data></Cell>
+             <Cell><Data ss:Type="Number">${document.getElementById(`${type}Hotel_${i}`).value}</Data></Cell>
+             <Cell><Data ss:Type="Number">${document.getElementById(`${type}Food_${i}`).value}</Data></Cell>
+             <Cell><Data ss:Type="Number">${document.getElementById(`${type}Reg_${i}`).value}</Data></Cell>
+             <Cell><Data ss:Type="Number">${document.getElementById(`${type}Other_${i}`).value}</Data></Cell>
+             <Cell ss:Formula="=RC[-8]*(RC[-6]+RC[-5]+RC[-2]+RC[-1]+(RC[-7]*(RC[-4]+RC[-3])))"><Data ss:Type="Number">0</Data></Cell></Row>`;
+        }
+        str += '</Table></Worksheet>';
+        return str;
+    }    
+
+    // --- UNIFIED JUSTIFICATION GENERATOR ---
+    function generateCoreText(d) {
+        const duration = parseInt(document.getElementById('duration').value);
+        const escalation = 1.03;
+        
+        // Helper to calculate year-by-year costs
+        function calculateYearlyCosts(baseAmount, years = duration) {
+            let costs = [];
+            for(let i = 0; i < years; i++) {
+                costs.push(baseAmount * Math.pow(escalation, i));
+            }
+            return costs;
+        }
+        
+        // Helper to format year amounts (for compatibility)
+        function formatYearAmounts(baseAmount) {
+            let costs = calculateYearlyCosts(baseAmount);
+            return costs.map(c => fmt(c)).join(', ');
+        }
+        
+        // Helper to format currency
+        function fmt(amount) {
+            return `$${Math.round(amount).toLocaleString()}`;
+        }
+        
+        let txt = `A. SENIOR PERSONNEL\n`;
+        txt += `All salaries of senior personnel are calculated based on their University of St. Thomas salaries. Salaries are calculated to escalate 3% per year for a cost-of-living increase per institutional policy.\n\n`;
+        
+        // === PI CALCULATION ===
+        let piBase = parseFloat(document.getElementById('piBase').value);
+        let piAcadCourses = parseFloat(d.piBuyout !== 'variable' ? d.piBuyout : 0);
+        let piSumMonths = parseFloat(d.piSum !== 'variable' ? d.piSum : 0);
+        let piAcadBase = piBase * 0.125 * piAcadCourses;
+        let piSumBase = piBase * (1/9) * piSumMonths;
+        let piTotalBase = piAcadBase + piSumBase;
+        
+        let piYearlyCosts = calculateYearlyCosts(piTotalBase);
+        let piTotal = piYearlyCosts.reduce((a, b) => a + b, 0);
+        let piEffort = (piAcadCourses * 0.125 + piSumMonths * (1/9)) * 100; // as percentage
+        
+        txt += `A.1 ${d.pi} (PI): `;
+        txt += `BLUE_START[Describe PI's specific roles and responsibilities, e.g., "As PI, Dr. ${d.pi} will oversee all aspects of project and budget management; convene team meetings; manage dissemination; report to NSF; and advise scholars."]BLUE_END `;
+        
+        // Convert course buyouts to person-months (1 course = 12.5% of 9 months = 1.125 PM)
+        let piAcadPM = piAcadCourses * 1.125;
+        let piTotalPM = piAcadPM + piSumMonths;
+        
+        txt += `${d.pi.split(' ')[0]} will devote `;
+        if(piAcadPM > 0 && piSumMonths > 0) {
+            txt += `${piAcadPM.toFixed(2)} academic year and ${piSumMonths} summer person-month${(piAcadPM + piSumMonths) > 1 ? 's' : ''} `;
+        } else if(piAcadPM > 0) {
+            txt += `${piAcadPM.toFixed(2)} academic year person-month${piAcadPM > 1 ? 's' : ''} `;
+        } else if(piSumMonths > 0) {
+            txt += `${piSumMonths} summer person-month${piSumMonths > 1 ? 's' : ''} `;
+        }
+        txt += `in each of Years 1–${duration}. `;
+        
+        txt += `${d.pi.split(' ')[0]}'s salary request includes `;
+        let piYearlyText = piYearlyCosts.map((cost, i) => `${fmt(cost)} for Year ${i + 1}`).join(', ');
+        txt += `${piYearlyText}, totaling ${fmt(piTotal)} over the project period.\n\n`;
+        
+        // === CO-PIs CALCULATION ===
+        if(d.copis.length > 0) {
+            d.copis.forEach((c, idx) => {
+                let copiBase = parseFloat(document.getElementById(`copiBase_${idx}`).value);
+                let copiAcad = parseFloat(c.acad);
+                let copiSum = parseFloat(c.sum);
+                let copiAcadBase = copiBase * 0.125 * copiAcad;
+                let copiSumBase = copiBase * (1/9) * copiSum;
+                let copiTotalBase = copiAcadBase + copiSumBase;
+                let copiYearlyCosts = calculateYearlyCosts(copiTotalBase);
+                let copiTotal = copiYearlyCosts.reduce((a, b) => a + b, 0);
+                
+                // Convert course buyouts to person-months
+                let copiAcadPM = copiAcad * 1.125;
+                
+                txt += `A.${idx + 2} ${c.name} (Co-PI): `;
+                txt += `BLUE_START[Describe co-PI's specific roles and responsibilities]BLUE_END `;
+                txt += `${c.name.split(' ')[0]} will devote `;
+                if(copiAcadPM > 0 && copiSum > 0) {
+                    txt += `${copiAcadPM.toFixed(2)} academic year and ${copiSum} summer person-month${(copiAcadPM + copiSum) > 1 ? 's' : ''} `;
+                } else if(copiAcadPM > 0) {
+                    txt += `${copiAcadPM.toFixed(2)} academic year person-month${copiAcadPM > 1 ? 's' : ''} `;
+                } else if(copiSum > 0) {
+                    txt += `${copiSum} summer person-month${copiSum > 1 ? 's' : ''} `;
+                }
+                txt += `in each of Years 1–${duration}. `;
+                
+                let copiYearlyText = copiYearlyCosts.map((cost, i) => `${fmt(cost)} for Year ${i + 1}`).join(', ');
+                txt += `${c.name.split(' ')[0]}'s salary request includes ${copiYearlyText}, totaling ${fmt(copiTotal)} over the project period.\n\n`;
+            });
+        }
+        
+        // === OTHER FACULTY CALCULATION ===
+        if(d.otherFac.length > 0) {
+            d.otherFac.forEach((f, idx) => {
+                let facBase = parseFloat(document.getElementById(`facBase_${idx}`).value);
+                let facAcad = parseFloat(f.acad);
+                let facSum = parseFloat(f.sum);
+                let facAcadBase = facBase * 0.125 * facAcad;
+                let facSumBase = facBase * (1/9) * facSum;
+                let facTotalBase = facAcadBase + facSumBase;
+                let facYearlyCosts = calculateYearlyCosts(facTotalBase);
+                let facTotal = facYearlyCosts.reduce((a, b) => a + b, 0);
+                
+                // Convert course buyouts to person-months
+                let facAcadPM = facAcad * 1.125;
+                
+                let facNum = idx + 2 + d.copis.length;
+                txt += `A.${facNum} ${f.name} (Senior Personnel): `;
+                txt += `BLUE_START[Describe faculty member's specific roles and responsibilities]BLUE_END `;
+                txt += `${f.name.split(' ')[0]} will devote `;
+                if(facAcadPM > 0 && facSum > 0) {
+                    txt += `${facAcadPM.toFixed(2)} academic year and ${facSum} summer person-month${(facAcadPM + facSum) > 1 ? 's' : ''} `;
+                } else if(facAcadPM > 0) {
+                    txt += `${facAcadPM.toFixed(2)} academic year person-month${facAcadPM > 1 ? 's' : ''} `;
+                } else if(facSum > 0) {
+                    txt += `${facSum} summer person-month${facSum > 1 ? 's' : ''} `;
+                }
+                txt += `in each of Years 1–${duration}. `;
+                
+                let facYearlyText = facYearlyCosts.map((cost, i) => `${fmt(cost)} for Year ${i + 1}`).join(', ');
+                txt += `${f.name.split(' ')[0]}'s salary request includes ${facYearlyText}, totaling ${fmt(facTotal)} over the project period.\n\n`;
+            });
+        }
+        
+        // === B. OTHER PERSONNEL ===
+        txt += `B. OTHER PERSONNEL\n`;
+        
+        // Staff
+        if(d.staff.length > 0) {
+            d.staff.forEach((s, idx) => {
+                let staffBase = parseFloat(document.getElementById(`staffBase_${idx}`).value);
+                let effort = parseFloat(s.effort) || 100;
+                let staffAnnual = staffBase * (effort / 100);
+                let staffYearlyCosts = calculateYearlyCosts(staffAnnual);
+                let staffTotal = staffYearlyCosts.reduce((a, b) => a + b, 0);
+                
+                txt += `B.${idx + 1} ${s.name} (Staff): `;
+                txt += `BLUE_START[Describe staff member's specific roles and responsibilities]BLUE_END `;
+                txt += `Funds are requested for ${effort}% effort (${(effort/100 * 12).toFixed(1)} calendar months) annually for Years 1-${duration}. `;
+                let staffYearlyText = staffYearlyCosts.map((cost, i) => `${fmt(cost)} for Year ${i + 1}`).join(', ');
+                txt += `${s.name.split(' ')[0]}'s salary request includes ${staffYearlyText}, totaling ${fmt(staffTotal)} over the project period.\n\n`;
+            });
+        }
+        
+        // Post-Docs
+        if(d.postdocs.length > 0) {
+            d.postdocs.forEach((p, idx) => {
+                let pdBase = parseFloat(document.getElementById(`pdBase_${idx}`).value);
+                let pdYearlyCosts = calculateYearlyCosts(pdBase);
+                let pdTotal = pdYearlyCosts.reduce((a, b) => a + b, 0);
+                
+                let pdNum = idx + 1 + d.staff.length;
+                txt += `B.${pdNum} ${p.name} (Post-Doctoral Researcher): `;
+                txt += `BLUE_START[Describe post-doc's research focus and responsibilities]BLUE_END `;
+                txt += `Funds are requested for 12 calendar months effort annually for Years 1-${duration}. `;
+                let pdYearlyText = pdYearlyCosts.map((cost, i) => `${fmt(cost)} for Year ${i + 1}`).join(', ');
+                txt += `${p.name.split(' ')[0]}'s salary request includes ${pdYearlyText}, totaling ${fmt(pdTotal)} over the project period.\n\n`;
+            });
+        }
+        
+        // Graduate Students
+        if(d.grads.length > 0) {
+            let gradNum = 1 + d.staff.length + d.postdocs.length;
+            let gradStipend = parseFloat(d.grads[0].stip);
+            let gradAnnual = gradStipend * 12 * d.grads.length;
+            let gradYearlyCosts = calculateYearlyCosts(gradAnnual);
+            let gradTotal = gradYearlyCosts.reduce((a, b) => a + b, 0);
+            
+            txt += `B.${gradNum} Graduate Students: `;
+            txt += `Funds have been budgeted for the participation of ${d.grads.length} graduate student${d.grads.length > 1 ? 's' : ''}. `;
+            txt += `Each graduate student assistant will receive 12 months of salary support at a rate of ${fmt(gradStipend)}/month each year of the project. `;
+            txt += `The Graduate Student${d.grads.length > 1 ? 's' : ''} will support the PI and the project team with the technical aspects of the project. `;
+            txt += `BLUE_START[Provide detail of what the GRA will be doing on this project, e.g., "Tasks include data collection and analysis, literature reviews, experimental setup and testing, technical report preparation, and assisting with research presentations."]BLUE_END `;
+            let gradYearlyText = gradYearlyCosts.map((cost, i) => `${fmt(cost)} for Year ${i + 1}`).join(', ');
+            txt += `The total funding request is ${gradYearlyText}. `;
+            txt += `The total amount of graduate student salaries is ${fmt(gradTotal)} for the ${duration} years of the project.\n\n`;
+        }
+        
+        // Undergrads
+        if(d.ug.length > 0) {
+            let ugNum = 1 + d.staff.length + d.postdocs.length + (d.grads.length > 0 ? 1 : 0);
+            let ugRate = parseFloat(d.ug[0].rate);
+            let ugAcadHrs = parseFloat(d.ug[0].ha);
+            let ugSumHrs = parseFloat(d.ug[0].hs);
+            
+            // Calculate total hours for all undergrads combined
+            let totalAcadHrsPerWeek = ugAcadHrs * d.ug.length;
+            let totalSumHrsPerWeek = ugSumHrs * d.ug.length;
+            
+            let ugAnnual = (ugRate * ugAcadHrs * 36) + (ugRate * ugSumHrs * 12); // per student
+            let ugTotalAnnual = ugAnnual * d.ug.length;
+            let ugYearlyCosts = calculateYearlyCosts(ugTotalAnnual);
+            let ugTotal = ugYearlyCosts.reduce((a, b) => a + b, 0);
+            
+            txt += `B.${ugNum} Undergraduate Students: `;
+            txt += `Funds have been budgeted for the participation of ${d.ug.length} undergraduate student${d.ug.length > 1 ? 's' : ''}. `;
+            txt += `Undergraduate students will support the PI in executing various aspects of the project. `;
+            txt += `BLUE_START[Provide detail of what undergraduate students will be doing, e.g., "Tasks include assisting with laboratory setup, conducting preliminary experiments, data entry and organization, literature searches, and supporting outreach activities."]BLUE_END `;
+            txt += `Each undergraduate student(s) will be paid ${fmt(ugRate)}/hour for a total of ${totalAcadHrsPerWeek} hours/week during the 36-week academic year and ${totalSumHrsPerWeek} hours/week during the 12-week summer for each of the ${duration} years of the project. `;
+            txt += `The total amount of undergraduate student wages is ${fmt(ugTotal)} for ${duration} years.\n\n`;
+        }
+
+        txt += `C. FRINGE BENEFITS\n`;
+        txt += `The institution's fringe benefit rate is applied as follows:\n`;
+        txt += `- 35% for Faculty (Academic Year) and 12-month Staff.\n`;
+        txt += `- 8% for Faculty Summer Salary, Graduate Students, and Undergraduate Students (Summer only).\n`;
+        txt += `- 0% for Undergraduate Students (Academic Year).\n\n`;
+        
+        // Calculate fringe benefits by year
+        let fringeTotalByYear = [];
+        for(let y = 0; y < duration; y++) {
+            let yearFringe = 0;
+            
+            // PI fringe
+            let piBase = parseFloat(document.getElementById('piBase').value);
+            let piAcadCourses = parseFloat(d.piBuyout !== 'variable' ? d.piBuyout : 0);
+            let piSumMonths = parseFloat(d.piSum !== 'variable' ? d.piSum : 0);
+            let piAcadSalary = piBase * 0.125 * piAcadCourses * Math.pow(escalation, y);
+            let piSumSalary = piBase * (1/9) * piSumMonths * Math.pow(escalation, y);
+            yearFringe += piAcadSalary * 0.35 + piSumSalary * 0.08;
+            
+            // Co-PIs fringe
+            d.copis.forEach((c, idx) => {
+                let copiBase = parseFloat(document.getElementById(`copiBase_${idx}`).value);
+                let copiAcad = parseFloat(c.acad);
+                let copiSum = parseFloat(c.sum);
+                let copiAcadSalary = copiBase * 0.125 * copiAcad * Math.pow(escalation, y);
+                let copiSumSalary = copiBase * (1/9) * copiSum * Math.pow(escalation, y);
+                yearFringe += copiAcadSalary * 0.35 + copiSumSalary * 0.08;
+            });
+            
+            // Other Faculty fringe
+            d.otherFac.forEach((f, idx) => {
+                let facBase = parseFloat(document.getElementById(`facBase_${idx}`).value);
+                let facAcad = parseFloat(f.acad);
+                let facSum = parseFloat(f.sum);
+                let facAcadSalary = facBase * 0.125 * facAcad * Math.pow(escalation, y);
+                let facSumSalary = facBase * (1/9) * facSum * Math.pow(escalation, y);
+                yearFringe += facAcadSalary * 0.35 + facSumSalary * 0.08;
+            });
+            
+            // Staff fringe (35%)
+            d.staff.forEach((s, idx) => {
+                let staffBase = parseFloat(document.getElementById(`staffBase_${idx}`).value);
+                let effort = parseFloat(s.effort) || 100;
+                let staffSalary = staffBase * (effort / 100) * Math.pow(escalation, y);
+                yearFringe += staffSalary * 0.35;
+            });
+            
+            // Post-Docs fringe (35%)
+            d.postdocs.forEach((p, idx) => {
+                let pdBase = parseFloat(document.getElementById(`pdBase_${idx}`).value);
+                let pdSalary = pdBase * Math.pow(escalation, y);
+                yearFringe += pdSalary * 0.35;
+            });
+            
+            // Graduate Students fringe (8%)
+            if(d.grads.length > 0) {
+                let gradStipend = parseFloat(d.grads[0].stip);
+                let gradSalary = gradStipend * 12 * d.grads.length * Math.pow(escalation, y);
+                yearFringe += gradSalary * 0.08;
+            }
+            
+            // Undergrads fringe (8% summer only, 0% academic)
+            if(d.ug.length > 0) {
+                let ugRate = parseFloat(d.ug[0].rate);
+                let ugAcadHrs = parseFloat(d.ug[0].ha);
+                let ugSumHrs = parseFloat(d.ug[0].hs);
+                let ugSumSalary = ugRate * ugSumHrs * 12 * d.ug.length * Math.pow(escalation, y);
+                yearFringe += ugSumSalary * 0.08;
+            }
+            
+            fringeTotalByYear.push(yearFringe);
+        }
+        
+        let fringeGrandTotal = fringeTotalByYear.reduce((a, b) => a + b, 0);
+        
+        txt += `The total amount of fringe benefits is `;
+        let fringeYearlyText = fringeTotalByYear.map((cost, i) => `${fmt(cost)} in Year ${i + 1}`).join('; ');
+        txt += `${fringeYearlyText}. The total fringe benefits requested is ${fmt(fringeGrandTotal)}.\n\n`;
+
+        txt += `D. EQUIPMENT\n`;
+        if(d.equip.length > 0) {
+            txt += `Funds are requested for the following equipment essential to the project:\n\n`;
+            
+            // Equipment table
+            txt += `TABLE_START\n`;
+            txt += `Item\tCost (Year 1)\n`;
+            let equipTotal = 0;
+            d.equip.forEach(e => {
+                let cost = parseFloat(e.cost);
+                equipTotal += cost;
+                txt += `${e.name}\t${fmt(cost)}\n`;
+            });
+            txt += `TOTAL EQUIPMENT\t${fmt(equipTotal)}\n`;
+            txt += `TABLE_END\n\n`;
+            
+            txt += `The total equipment request is ${fmt(equipTotal)}. Equipment purchases are budgeted for Year 1 only.\n\n`;
+        } else {
+            txt += `Not Applicable.\n\n`;
+        }
+
+        txt += `E. TRAVEL\n`;
+        if(d.domesticTravel.length > 0 || d.intlTravel.length > 0) {
+            
+            if(d.domesticTravel.length > 0) {
+                txt += `E.1 Domestic Travel:\n\n`;
+                
+                d.domesticTravel.forEach((trip, idx) => {
+                    let perTravelerCost = parseFloat(trip.airfare) + parseFloat(trip.ground) + parseFloat(trip.reg) + parseFloat(trip.other) + 
+                                         (parseFloat(trip.days) * (parseFloat(trip.hotel) + parseFloat(trip.food)));
+                    let totalCost = perTravelerCost * parseFloat(trip.travelers);
+                    
+                    // Trip name and purpose
+                    txt += `TRIP: ${trip.desc}\n`;
+                    txt += `BLUE_START[Add purpose/justification for this trip, e.g., "Funds are requested to cover domestic airfare, hotel, and meals for the PI to travel to [location] for [purpose]. This travel supports [project goals]."]BLUE_END\n\n`;
+                    
+                    // Cost breakdown table
+                    txt += `The travel costs breakdown is shown below estimated for ${trip.days} night${trip.days > 1 ? 's' : ''} travel (3% escalation is applied to out years):\n\n`;
+                    
+                    // Show year-by-year table for selected years
+                    if(trip.years.length > 1 && trip.years.length === duration) {
+                        // Annual trip - show all years
+                        txt += `TABLE_START\n`;
+                        // Header row with empty first cell
+                        txt += `Item`;
+                        trip.years.forEach(y => {
+                            txt += `\tYear ${y}`;
+                        });
+                        txt += `\n`;
+                        
+                        // Flights row
+                        txt += `Flights from MSP`;
+                        trip.years.forEach(y => {
+                            let cost = parseFloat(trip.airfare) * Math.pow(1.03, y - 1);
+                            txt += `\t$${cost.toFixed(0)}`;
+                        });
+                        txt += `\n`;
+                        
+                        // Hotel row
+                        txt += `Hotel (@ $${trip.hotel}/night for ${trip.days} nights)`;
+                        trip.years.forEach(y => {
+                            let cost = parseFloat(trip.hotel) * parseFloat(trip.days) * Math.pow(1.03, y - 1);
+                            txt += `\t$${cost.toFixed(0)}`;
+                        });
+                        txt += `\n`;
+                        
+                        // Ground transportation
+                        txt += `Ground Transportation`;
+                        trip.years.forEach(y => {
+                            let cost = parseFloat(trip.ground) * Math.pow(1.03, y - 1);
+                            txt += `\t$${cost.toFixed(0)}`;
+                        });
+                        txt += `\n`;
+                        
+                        // Meals
+                        txt += `Meals (@ $${trip.food}/day for ${trip.days} days)`;
+                        trip.years.forEach(y => {
+                            let cost = parseFloat(trip.food) * parseFloat(trip.days) * Math.pow(1.03, y - 1);
+                            txt += `\t$${cost.toFixed(0)}`;
+                        });
+                        txt += `\n`;
+                        
+                        if(parseFloat(trip.reg) > 0) {
+                            txt += `Registration`;
+                            trip.years.forEach(y => {
+                                let cost = parseFloat(trip.reg) * Math.pow(1.03, y - 1);
+                                txt += `\t$${cost.toFixed(0)}`;
+                            });
+                            txt += `\n`;
+                        }
+                        
+                        // Total per trip
+                        txt += `Cost per trip`;
+                        trip.years.forEach(y => {
+                            let cost = totalCost * Math.pow(1.03, y - 1);
+                            txt += `\t$${cost.toFixed(0)}`;
+                        });
+                        txt += `\nTABLE_END\n\n`;
+                    } else {
+                        // Single year or specific years - show cost breakdown
+                        txt += `Registration: $${trip.reg}\n`;
+                        txt += `Flights from MSP: $${trip.airfare}\n`;
+                        txt += `Hotel (@ $${trip.hotel}/night for ${trip.days} nights): $${(parseFloat(trip.hotel) * parseFloat(trip.days)).toFixed(0)}\n`;
+                        txt += `Ground Transportation: $${trip.ground}\n`;
+                        txt += `Meals (@ $${trip.food}/day for ${trip.days} days): $${(parseFloat(trip.food) * parseFloat(trip.days)).toFixed(0)}\n`;
+                        if(parseFloat(trip.other) > 0) {
+                            txt += `Other: $${trip.other}\n`;
+                        }
+                        txt += `Cost per trip: $${totalCost.toFixed(0)}\n\n`;
+                    }
+                    
+                    // Frequency statement
+                    if(trip.years.length === 0) {
+                        txt += `FREQ: No years selected.\n`;
+                    } else if(trip.years.length === duration) {
+                        txt += `FREQ: Annual trip occurring in Years 1–${duration}.\n`;
+                        let totalTravelCost = 0;
+                        trip.years.forEach(y => {
+                            totalTravelCost += totalCost * Math.pow(1.03, y - 1);
+                        });
+                        txt += `The total request for domestic travel for ${trip.desc} during the ${duration} years of the project period is $${totalTravelCost.toFixed(0)}.\n\n`;
+                    } else {
+                        let yearsList = trip.years.join(', ');
+                        txt += `FREQ: Trip occurs in Year${trip.years.length > 1 ? 's' : ''} ${yearsList}.\n`;
+                        let totalTravelCost = 0;
+                        trip.years.forEach(y => {
+                            totalTravelCost += totalCost * Math.pow(1.03, y - 1);
+                        });
+                        txt += `Total request: $${totalTravelCost.toFixed(0)}.\n\n`;
+                    }
+                });
+            }
+            
+            if(d.intlTravel.length > 0) {
+                txt += `E.2 International Travel:\n\n`;
+                
+                d.intlTravel.forEach((trip, idx) => {
+                    let perTravelerCost = parseFloat(trip.airfare) + parseFloat(trip.ground) + parseFloat(trip.reg) + parseFloat(trip.other) + 
+                                         (parseFloat(trip.days) * (parseFloat(trip.hotel) + parseFloat(trip.food)));
+                    let totalCost = perTravelerCost * parseFloat(trip.travelers);
+                    
+                    txt += `TRIP: ${trip.desc}\n`;
+                    txt += `BLUE_START[Add purpose/justification for this international trip]BLUE_END\n\n`;
+                    
+                    txt += `The travel costs breakdown is shown below:\n\n`;
+                    txt += `Registration: $${trip.reg}\n`;
+                    txt += `Flights: $${trip.airfare}\n`;
+                    txt += `Hotel (@ $${trip.hotel}/night for ${trip.days} nights): $${(parseFloat(trip.hotel) * parseFloat(trip.days)).toFixed(0)}\n`;
+                    txt += `Ground Transportation: $${trip.ground}\n`;
+                    txt += `Meals (@ $${trip.food}/day for ${trip.days} days): $${(parseFloat(trip.food) * parseFloat(trip.days)).toFixed(0)}\n`;
+                    if(parseFloat(trip.other) > 0) {
+                        txt += `Other: $${trip.other}\n`;
+                    }
+                    txt += `Cost per trip: $${totalCost.toFixed(0)}\n\n`;
+                    
+                    // Frequency
+                    if(trip.years.length === duration) {
+                        txt += `FREQ: Annual trip occurring in Years 1–${duration}.\n`;
+                        let totalTravelCost = 0;
+                        trip.years.forEach(y => {
+                            totalTravelCost += totalCost * Math.pow(1.03, y - 1);
+                        });
+                        txt += `Total request: $${totalTravelCost.toFixed(0)}.\n\n`;
+                    } else if(trip.years.length > 0) {
+                        let yearsList = trip.years.join(', ');
+                        txt += `FREQ: Trip occurs in Year${trip.years.length > 1 ? 's' : ''} ${yearsList}.\n`;
+                        let totalTravelCost = 0;
+                        trip.years.forEach(y => {
+                            totalTravelCost += totalCost * Math.pow(1.03, y - 1);
+                        });
+                        txt += `Total request: ${fmt(totalTravelCost)}.\n\n`;
+                    }
+                });
+            }
+            
+            // Calculate total domestic and international travel
+            let domesticTotal = 0;
+            d.domesticTravel.forEach(trip => {
+                let perTravelerCost = parseFloat(trip.airfare) + parseFloat(trip.ground) + parseFloat(trip.reg) + parseFloat(trip.other) + 
+                                     (parseFloat(trip.days) * (parseFloat(trip.hotel) + parseFloat(trip.food)));
+                let totalCost = perTravelerCost * parseFloat(trip.travelers);
+                trip.years.forEach(y => {
+                    domesticTotal += totalCost * Math.pow(1.03, y - 1);
+                });
+            });
+            
+            let intlTotal = 0;
+            d.intlTravel.forEach(trip => {
+                let perTravelerCost = parseFloat(trip.airfare) + parseFloat(trip.ground) + parseFloat(trip.reg) + parseFloat(trip.other) + 
+                                     (parseFloat(trip.days) * (parseFloat(trip.hotel) + parseFloat(trip.food)));
+                let totalCost = perTravelerCost * parseFloat(trip.travelers);
+                trip.years.forEach(y => {
+                    intlTotal += totalCost * Math.pow(1.03, y - 1);
+                });
+            });
+            
+            let travelGrandTotal = domesticTotal + intlTotal;
+            
+            if(domesticTotal > 0 && intlTotal > 0) {
+                txt += `The total request for Domestic Travel is ${fmt(domesticTotal)} and for International Travel is ${fmt(intlTotal)} over the duration of the project. The total Travel request is ${fmt(travelGrandTotal)}.\n\n`;
+            } else if(domesticTotal > 0) {
+                txt += `The total request for Domestic Travel is ${fmt(domesticTotal)} over the duration of the project.\n\n`;
+            } else if(intlTotal > 0) {
+                txt += `The total request for International Travel is ${fmt(intlTotal)} over the duration of the project.\n\n`;
+            }
+        } else {
+            txt += `Not Applicable.\n\n`;
+        }
+
+        txt += `F. PARTICIPANT SUPPORT\n`;
+        let hasPartSupport = false;
+        let partStip = parseFloat(document.getElementById('partStipend').value) || 0;
+        let partTravel = parseFloat(document.getElementById('partTravel').value) || 0;
+        let partSub = parseFloat(document.getElementById('partSub').value) || 0;
+        let partOther = parseFloat(document.getElementById('partOther').value) || 0;
+        
+        if(partStip > 0) { txt += `Stipends (Year ${duration > 1 ? '1-' + duration : '1'}): ${formatYearAmounts(partStip)}\n`; hasPartSupport = true; }
+        if(partTravel > 0) { txt += `Travel (Year ${duration > 1 ? '1-' + duration : '1'}): ${formatYearAmounts(partTravel)}\n`; hasPartSupport = true; }
+        if(partSub > 0) { txt += `Subsistence (Year ${duration > 1 ? '1-' + duration : '1'}): ${formatYearAmounts(partSub)}\n`; hasPartSupport = true; }
+        if(partOther > 0) { txt += `Other (Year ${duration > 1 ? '1-' + duration : '1'}): ${formatYearAmounts(partOther)}\n`; hasPartSupport = true; }
+        if(!hasPartSupport) txt += `Not Applicable.\n`;
+        txt += `\n`;
+
+        txt += `G. OTHER DIRECT COSTS\n\n`;
+        
+        // Materials & Supplies
+        txt += `Materials and Supplies\n`;
+        let matCost = parseFloat(d.matCost) || 0;
+        if(matCost > 0) {
+            txt += `Funds are requested for project-specific consumables and supplies.\n`;
+            txt += `BLUE_START[Itemize materials and supplies to be purchased, using best guess on amount per category. Make sure it adds up to the total per year. While a table is not required, the level of detail included must be sufficient to meet the requirements of the sponsor.]BLUE_END\n`;
+            txt += `Budget (Year ${duration > 1 ? '1-' + duration : '1'}): ${formatYearAmounts(matCost)}\n\n`;
+        } else {
+            txt += `Not Applicable.\n\n`;
+        }
+        
+        // Publication Costs
+        txt += `Publication Costs\n`;
+        let pubCost = parseFloat(document.getElementById('costPubs').value) || 0;
+        if(pubCost > 0) {
+            txt += `Funds are requested for costs associated with publishing research results in peer-reviewed journals and conferences.\n`;
+            txt += `Budget (Year ${duration > 1 ? '1-' + duration : '1'}): ${formatYearAmounts(pubCost)}\n\n`;
+        } else {
+            txt += `Not Applicable.\n\n`;
+        }
+        
+        // Tuition Remission
+        txt += `Tuition Remission\n`;
+        if(d.tuition > 0 && d.grads.length > 0) {
+            let tuitionRate = parseFloat(document.getElementById('tuitionRate').value);
+            let tuitionTotal = tuitionRate * 7 * d.grads.length; // 7 courses per year
+            txt += `Tuition remission is requested for ${d.grads.length} graduate student(s) at 7 courses per year.\n`;
+            txt += `Rate: ${fmt(tuitionRate)} per course. The School of Engineering charges graduate tuition by the Credit Hr. https://www.stthomas.edu/financialaid/graduate/tuition-fee-rates/.\n`;
+            txt += `Budget (Year ${duration > 1 ? '1-' + duration : '1'}): ${formatYearAmounts(tuitionTotal)}\n\n`;
+        } else {
+            txt += `Not Applicable.\n\n`;
+        }
+        
+        // Consultant Services
+        txt += `Consultant Services\n`;
+        let consultCost = parseFloat(document.getElementById('costConsultants').value) || 0;
+        if(consultCost > 0) {
+            txt += `Funds are requested for consultant services to provide specialized expertise for the project.\n`;
+            txt += `BLUE_START[Please make sure consultants are well justified. Provide Name for each Consultant and itemize each consultant, rate per day, number of days, any additional costs such as travel, lodging, supplies, and total costs for each consultant.]BLUE_END\n`;
+            txt += `Budget (Year ${duration > 1 ? '1-' + duration : '1'}): ${formatYearAmounts(consultCost)}\n\n`;
+        } else {
+            txt += `Not Applicable.\n\n`;
+        }
+        
+        // Subawards
+        txt += `Subawards\n`;
+        if(d.subName) {
+            txt += `A subaward to ${d.subName} is requested to provide complementary expertise and resources essential to the project. `;
+            if(Array.isArray(d.subCost)) {
+                // Variable amounts by year
+                let amounts = d.subCost.map(amt => `${fmt(parseFloat(amt))}`).join(', ');
+                txt += `Budget (Year ${duration > 1 ? '1-' + duration : '1'}): ${amounts}\n`;
+            } else if(typeof d.subCost === 'number' || (typeof d.subCost === 'string' && d.subCost !== 'variable')) {
+                // Fixed amount (escalated)
+                let subAmt = parseFloat(d.subCost);
+                txt += `Budget (Year ${duration > 1 ? '1-' + duration : '1'}): ${formatYearAmounts(subAmt)}\n`;
+            } else {
+                txt += `The subaward amount varies by year as detailed in the budget.\n`;
+            }
+            txt += `Per federal regulations, indirect costs on subawards are capped at $50,000 per year, with any amount exceeding this threshold excluded from the Modified Total Direct Costs (MTDC) base.\n\n`;
+        } else {
+            txt += `Not Applicable.\n\n`;
+        }
+
+        txt += `I. INDIRECT COSTS\n`;
+        txt += `The University of St. Thomas requests its federally negotiated F&A/indirect cost rate of 41.4% calculated on Modified Total Direct Costs. `;
+        txt += `MTDC excludes equipment, tuition remission, participant support costs, and subaward amounts in excess of $50,000.\n\n`;
+        
+        // Calculate Total Direct Costs (TDC) and exclusions by year
+        let idcTotalByYear = [];
+        let mtdcByYear = [];
+        
+        for(let y = 0; y < duration; y++) {
+            let yearTDC = 0;
+            
+            // A. SENIOR PERSONNEL
+            // PI
+            let piBase = parseFloat(document.getElementById('piBase').value);
+            let piAcadCourses = parseFloat(d.piBuyout !== 'variable' ? d.piBuyout : 0);
+            let piSumMonths = parseFloat(d.piSum !== 'variable' ? d.piSum : 0);
+            yearTDC += (piBase * 0.125 * piAcadCourses + piBase * (1/9) * piSumMonths) * Math.pow(escalation, y);
+            
+            // Co-PIs
+            d.copis.forEach((c, idx) => {
+                let copiBase = parseFloat(document.getElementById(`copiBase_${idx}`).value);
+                yearTDC += (copiBase * 0.125 * parseFloat(c.acad) + copiBase * (1/9) * parseFloat(c.sum)) * Math.pow(escalation, y);
+            });
+            
+            // Other Faculty
+            d.otherFac.forEach((f, idx) => {
+                let facBase = parseFloat(document.getElementById(`facBase_${idx}`).value);
+                yearTDC += (facBase * 0.125 * parseFloat(f.acad) + facBase * (1/9) * parseFloat(f.sum)) * Math.pow(escalation, y);
+            });
+            
+            // B. OTHER PERSONNEL
+            // Staff
+            d.staff.forEach((s, idx) => {
+                let staffBase = parseFloat(document.getElementById(`staffBase_${idx}`).value);
+                let effort = parseFloat(s.effort) || 100;
+                yearTDC += staffBase * (effort / 100) * Math.pow(escalation, y);
+            });
+            
+            // Post-Docs
+            d.postdocs.forEach((p, idx) => {
+                let pdBase = parseFloat(document.getElementById(`pdBase_${idx}`).value);
+                yearTDC += pdBase * Math.pow(escalation, y);
+            });
+            
+            // Graduate Students
+            if(d.grads.length > 0) {
+                let gradStipend = parseFloat(d.grads[0].stip);
+                yearTDC += gradStipend * 12 * d.grads.length * Math.pow(escalation, y);
+            }
+            
+            // Undergrads
+            if(d.ug.length > 0) {
+                let ugRate = parseFloat(d.ug[0].rate);
+                let ugAcadHrs = parseFloat(d.ug[0].ha);
+                let ugSumHrs = parseFloat(d.ug[0].hs);
+                yearTDC += (ugRate * ugAcadHrs * 36 + ugRate * ugSumHrs * 12) * d.ug.length * Math.pow(escalation, y);
+            }
+            
+            // C. FRINGE BENEFITS
+            yearTDC += fringeTotalByYear[y];
+            
+            // D. EQUIPMENT (included in TDC, but will be excluded from MTDC)
+            let yearEquip = 0;
+            if(y === 0) { // Equipment only in Year 1
+                d.equip.forEach(e => {
+                    yearEquip += parseFloat(e.cost);
+                });
+            }
+            yearTDC += yearEquip;
+            
+            // E. TRAVEL
+            let yearTravel = 0;
+            if(d.domesticTravel) {
+                d.domesticTravel.forEach(trip => {
+                    if(trip.years.includes(y + 1)) {
+                        let perTravelerCost = parseFloat(trip.airfare) + parseFloat(trip.ground) + parseFloat(trip.reg) + parseFloat(trip.other) + 
+                                             (parseFloat(trip.days) * (parseFloat(trip.hotel) + parseFloat(trip.food)));
+                        let totalCost = perTravelerCost * parseFloat(trip.travelers);
+                        yearTravel += totalCost * Math.pow(escalation, y);
+                    }
+                });
+            }
+            
+            if(d.intlTravel) {
+                d.intlTravel.forEach(trip => {
+                    if(trip.years.includes(y + 1)) {
+                        let perTravelerCost = parseFloat(trip.airfare) + parseFloat(trip.ground) + parseFloat(trip.reg) + parseFloat(trip.other) + 
+                                             (parseFloat(trip.days) * (parseFloat(trip.hotel) + parseFloat(trip.food)));
+                        let totalCost = perTravelerCost * parseFloat(trip.travelers);
+                        yearTravel += totalCost * Math.pow(escalation, y);
+                    }
+                });
+            }
+            yearTDC += yearTravel;
+            
+            // F. PARTICIPANT SUPPORT (included in TDC, but will be excluded from MTDC)
+            let yearPartSupport = 0;
+            let partStip = parseFloat(document.getElementById('partStipend').value) || 0;
+            let partTravel = parseFloat(document.getElementById('partTravel').value) || 0;
+            let partSub = parseFloat(document.getElementById('partSub').value) || 0;
+            let partOther = parseFloat(document.getElementById('partOther').value) || 0;
+            yearPartSupport = (partStip + partTravel + partSub + partOther) * Math.pow(escalation, y);
+            yearTDC += yearPartSupport;
+            
+            // G. OTHER DIRECT COSTS
+            let matCost = parseFloat(d.matCost) || 0;
+            yearTDC += matCost * Math.pow(escalation, y);
+            
+            let pubCost = parseFloat(document.getElementById('costPubs').value) || 0;
+            yearTDC += pubCost * Math.pow(escalation, y);
+            
+            // Tuition (included in TDC, but will be excluded from MTDC)
+            let yearTuition = 0;
+            if(d.tuition > 0 && d.grads.length > 0) {
+                let tuitionRate = parseFloat(document.getElementById('tuitionRate').value);
+                yearTuition = tuitionRate * 7 * d.grads.length * Math.pow(escalation, y);
+            }
+            yearTDC += yearTuition;
+            
+            // Subaward - full amount in TDC
+            let yearSubCost = 0;
+            if(d.subName && d.subCost) {
+                if(Array.isArray(d.subCost)) {
+                    yearSubCost = parseFloat(d.subCost[y]) || 0;
+                } else {
+                    yearSubCost = parseFloat(d.subCost) * Math.pow(escalation, y);
+                }
+            }
+            yearTDC += yearSubCost;
+            
+            // NOW CALCULATE MTDC by subtracting exclusions from TDC
+            let yearMTDC = yearTDC;
+            
+            // Subtract Equipment
+            yearMTDC -= yearEquip;
+            
+            // Subtract Tuition
+            yearMTDC -= yearTuition;
+            
+            // Subtract Participant Support
+            yearMTDC -= yearPartSupport;
+            
+            // Subtract Subaward excess over $50k (cumulative logic)
+            let subExcess = 0;
+            if(yearSubCost > 0) {
+                // Calculate cumulative subaward up to this year
+                let cumulativeSub = 0;
+                for(let p = 0; p <= y; p++) {
+                    if(d.subCost) {
+                        if(Array.isArray(d.subCost)) {
+                            cumulativeSub += parseFloat(d.subCost[p]) || 0;
+                        } else {
+                            cumulativeSub += parseFloat(d.subCost) * Math.pow(escalation, p);
+                        }
+                    }
+                }
+                
+                let prevCumulative = cumulativeSub - yearSubCost;
+                
+                // Calculate what portion is exempt (first $50k across all years)
+                let exempt = 0;
+                if(prevCumulative >= 50000) {
+                    exempt = 0; // Already exceeded $50k in previous years
+                } else if(cumulativeSub > 50000) {
+                    exempt = 50000 - prevCumulative; // Partial exemption
+                } else {
+                    exempt = yearSubCost; // Full amount is exempt
+                }
+                
+                subExcess = yearSubCost - exempt;
+            }
+            yearMTDC -= subExcess;
+            
+            mtdcByYear.push(yearMTDC);
+            
+            // Calculate IDC at 41.4%
+            let yearIDC = yearMTDC * 0.414;
+            idcTotalByYear.push(yearIDC);
+        }
+        
+        let idcGrandTotal = idcTotalByYear.reduce((a, b) => a + b, 0);
+        
+        txt += `The total Indirect Costs requested for the ${duration}-year project period is ${fmt(idcGrandTotal)}.`;
+
+        return txt;
+    }
+
+    function generateJustification() {
+        const format = document.getElementById('justFormat').value;
+        const d = collectData();
+        const rawText = generateCoreText(d);
+        let content = "", mime = "", ext = "";
+
+        if(format === 'md') {
+            // Add Markdown Syntax
+            content = "# BUDGET JUSTIFICATION\n\n";
+            // Replace main section headers
+            let formatted = rawText.replace(/^([A-Z]\. [A-Z ]+)$/gm, "## $1");
+            // Replace subcategory headers with bold
+            formatted = formatted.replace(/^(Materials and Supplies|Publication Costs|Tuition Remission|Consultant Services|Subawards)$/gm, "### **$1**");
+            // Replace travel subheaders
+            formatted = formatted.replace(/^(Domestic Travel|International Travel)$/gm, "#### *$1*");
+            // Replace TRIP: with bold
+            formatted = formatted.replace(/TRIP: ([^\n]+)/g, '**$1**');
+            // Replace FREQ: with italic
+            formatted = formatted.replace(/FREQ: ([^\n]+)/g, '*$1*');
+            content += formatted;
+            mime = 'text/markdown'; ext = '.md';
+        } else if (format === 'tex') {
+            // Add LaTeX Syntax
+            content = "\\documentclass{article}\n\\usepackage[margin=1in]{geometry}\n\\begin{document}\n\\section*{Budget Justification}\n\n";
+            // Replace main section headers
+            let formatted = rawText.replace(/^([A-Z]\. [A-Z ]+)$/gm, "\\subsection*{$1}");
+            // Replace subcategory headers
+            formatted = formatted.replace(/^(Materials and Supplies|Publication Costs|Tuition Remission|Consultant Services|Subawards)$/gm, "\\textbf{$1}");
+            // Replace travel subheaders
+            formatted = formatted.replace(/^(Domestic Travel|International Travel)$/gm, "\\textit{$1}");
+            // Replace TRIP: with bold
+            formatted = formatted.replace(/TRIP: ([^\n]+)/g, '\\textbf{$1}');
+            // Replace FREQ: with italic
+            formatted = formatted.replace(/FREQ: ([^\n]+)/g, '\\textit{$1}');
+            // Escape special characters
+            formatted = formatted.replace(/\$/g, "\\$").replace(/%/g, "\\%");
+            content += formatted;
+            content += "\n\\end{document}";
+            mime = 'application/x-latex'; ext = '.tex';
+        } else {
+            // Add HTML/Word Syntax with improved formatting
+            content = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'>
+            <head>
+                <meta charset='utf-8'>
+                <style>
+                    body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.5; }
+                    h1 { font-size: 16pt; font-weight: bold; text-align: center; margin-bottom: 20pt; }
+                    h2 { font-size: 14pt; font-weight: bold; margin-top: 12pt; margin-bottom: 6pt; }
+                    h3 { font-size: 12pt; font-weight: bold; margin-top: 10pt; margin-bottom: 4pt; }
+                    h4 { font-size: 12pt; font-weight: bold; font-style: normal; margin-top: 8pt; margin-bottom: 4pt; }
+                    p { margin: 6pt 0; }
+                    .trip-desc { font-weight: normal; text-decoration: underline; margin: 4pt 0; }
+                    .trip-freq { font-style: italic; }
+                    .blue-placeholder { color: blue; font-style: italic; }
+                    table { border-collapse: collapse; margin: 10pt 0; font-size: 11pt; }
+                    td, th { border: 1px solid black; padding: 2pt 6pt; vertical-align: top; }
+                    th { background-color: #f0f0f0; font-weight: bold; }
+                    tr { line-height: 1.2; }
+                </style>
+            </head>
+            <body>
+                <h1>Budget Justification</h1>`;
+            
+            // Process the text
+            let formatted = rawText;
+            
+            // Replace BLUE_START...BLUE_END with blue colored text
+            formatted = formatted.replace(/BLUE_START\[(.*?)\]BLUE_END/g, '<span class="blue-placeholder">$1</span>');
+            
+            // Replace TABLE_START...TABLE_END with actual HTML tables
+            formatted = formatted.replace(/TABLE_START\n([\s\S]*?)\nTABLE_END/g, function(match, tableContent) {
+                let rows = tableContent.trim().split('\n');
+                let tableHtml = '<table>';
+                rows.forEach((row, idx) => {
+                    let cells = row.split('\t').filter(cell => cell.trim() !== ''); // Filter out empty cells
+                    tableHtml += '<tr>';
+                    cells.forEach((cell, cellIdx) => {
+                        if(idx === 0) {
+                            tableHtml += `<th>${cell.trim()}</th>`;
+                        } else {
+                            tableHtml += `<td>${cell.trim()}</td>`;
+                        }
+                    });
+                    tableHtml += '</tr>';
+                });
+                tableHtml += '</table>';
+                return tableHtml;
+            });
+            
+            // Replace main section headers (A. B. C. etc.)
+            formatted = formatted.replace(/^([A-Z]\. [A-Z ]+)$/gm, "<h2>$1</h2>");
+            
+            // Replace subsection headers (A.1, B.3, etc.)
+            formatted = formatted.replace(/^([A-Z]\.\d+ )/gm, "<strong>$1</strong>");
+            
+            // Replace subcategory headers under OTHER DIRECT COSTS
+            formatted = formatted.replace(/^(Materials and Supplies|Publication Costs|Tuition Remission|Subawards|Consultant Services|Computer Services)$/gm, "<h3>$1</h3>");
+            
+            // Replace travel subheaders (E.1 Domestic Travel, E.2 International Travel)
+            formatted = formatted.replace(/^(E\.\d+ )(Domestic Travel|International Travel):?$/gm, "<h4>$1$2</h4>");
+            
+            // Replace TRIP: with underlined formatting
+            formatted = formatted.replace(/TRIP: ([^\n]+)/g, '<p class="trip-desc">$1</p>');
+            
+            // Replace FREQ: with italic formatting
+            formatted = formatted.replace(/FREQ: ([^\n]+)/g, '<p class="trip-freq">$1</p>');
+            
+            // Replace double line breaks with paragraph breaks
+            formatted = formatted.replace(/\n\n/g, "</p><p>");
+            
+            // Replace single line breaks with <br>
+            formatted = formatted.replace(/\n/g, "<br>");
+            
+            // Wrap in paragraph tags if not already wrapped
+            if (!formatted.startsWith('<')) {
+                formatted = '<p>' + formatted + '</p>';
+            }
+            
+            content += formatted;
+            content += "</body></html>";
+            mime = 'application/msword'; ext = '.doc';
+        }
+        downloadFile(content, `Budget_Justification${ext}`, mime);
+    }
+
+    function collectData() {
+        let d = {
+            pi: document.getElementById('piName').value || "The PI",
+            piBase: document.getElementById('piBase').value,
+            piBuyout: document.getElementById('piAcadVar').checked ? 'variable' : document.querySelector('.piAcadInput').value,
+            piSum: document.getElementById('piSumVar').checked ? 'variable' : document.querySelector('.piSumInput').value,
+            copis: [], otherFac: [], staff: [], postdocs: [], grads: [], ug: [], equip: []
+        };
+        // Gather loops
+        let nCo = document.getElementById('numCoPIs').value;
+        for(let i=0; i<nCo; i++) d.copis.push({
+            name: document.getElementById(`copiName_${i}`).value,
+            acad: document.getElementById(`copiAcad_${i}`).value,
+            sum: document.getElementById(`copiSum_${i}`).value
+        });
+        let nFac = document.getElementById('numFac').value;
+        for(let i=0; i<nFac; i++) d.otherFac.push({
+            name: document.getElementById(`facName_${i}`).value,
+            acad: document.getElementById(`facAcad_${i}`).value,
+            sum: document.getElementById(`facSum_${i}`).value
+        });
+        let nSt = document.getElementById('numStaff').value;
+        for(let i=0; i<nSt; i++) d.staff.push({
+            name: document.getElementById(`staffName_${i}`).value,
+            effort: document.getElementById(`staffEffort_${i}`).value
+        });
+        let nPd = document.getElementById('numPostDocs').value;
+        for(let i=0; i<nPd; i++) d.postdocs.push({name: document.getElementById(`pdName_${i}`).value});
+        let nGr = document.getElementById('numGrads').value;
+        for(let i=0; i<nGr; i++) d.grads.push({stip: document.getElementById(`gradStipend_${i}`).value});
+        let nUg = document.getElementById('numUndergrads').value;
+        for(let i=0; i<nUg; i++) d.ug.push({
+            rate: document.getElementById(`ugRate_${i}`).value,
+            ha: document.getElementById(`ugHrsAcad_${i}`).value,
+            hs: document.getElementById(`ugHrsSum_${i}`).value
+        });
+        let nEq = document.getElementById('numEquip').value;
+        for(let i=0; i<nEq; i++) d.equip.push({
+            name: document.getElementById(`equipName_${i}`).value,
+            cost: document.getElementById(`equipCost_${i}`).value
+        });
+        
+        // Travel
+        d.domesticTravel = [];
+        for(let i=0; i<tripCount.domestic; i++) {
+            // Get selected years
+            let selectedYears = [];
+            const yearCheckboxes = document.querySelectorAll(`.domesticYear_${i}`);
+            yearCheckboxes.forEach(checkbox => {
+                if(checkbox.checked) {
+                    selectedYears.push(parseInt(checkbox.dataset.year));
+                }
+            });
+            
+            d.domesticTravel.push({
+                desc: document.getElementById(`domesticDesc_${i}`).value || "Domestic Trip",
+                travelers: document.getElementById(`domesticNum_${i}`).value,
+                days: document.getElementById(`domesticDays_${i}`).value,
+                airfare: document.getElementById(`domesticAir_${i}`).value,
+                ground: document.getElementById(`domesticGround_${i}`).value,
+                hotel: document.getElementById(`domesticHotel_${i}`).value,
+                food: document.getElementById(`domesticFood_${i}`).value,
+                reg: document.getElementById(`domesticReg_${i}`).value,
+                other: document.getElementById(`domesticOther_${i}`).value,
+                years: selectedYears
+            });
+        }
+        d.intlTravel = [];
+        for(let i=0; i<tripCount.intl; i++) {
+            // Get selected years
+            let selectedYears = [];
+            const yearCheckboxes = document.querySelectorAll(`.intlYear_${i}`);
+            yearCheckboxes.forEach(checkbox => {
+                if(checkbox.checked) {
+                    selectedYears.push(parseInt(checkbox.dataset.year));
+                }
+            });
+            
+            d.intlTravel.push({
+                desc: document.getElementById(`intlDesc_${i}`).value || "International Trip",
+                travelers: document.getElementById(`intlNum_${i}`).value,
+                days: document.getElementById(`intlDays_${i}`).value,
+                airfare: document.getElementById(`intlAir_${i}`).value,
+                ground: document.getElementById(`intlGround_${i}`).value,
+                hotel: document.getElementById(`intlHotel_${i}`).value,
+                food: document.getElementById(`intlFood_${i}`).value,
+                reg: document.getElementById(`intlReg_${i}`).value,
+                other: document.getElementById(`intlOther_${i}`).value,
+                years: selectedYears
+            });
+        }
+        
+        d.matCost = document.getElementById('costMaterials').value;
+        d.tuition = 0; // check logic
+        if(d.grads.length > 0 && document.getElementById('gradTuition_0').value == "1") d.tuition = 1; 
+        if(document.getElementById('hasSubawards').checked) {
+            d.subName = document.getElementById('subName').value;
+            // Check if subaward varies by year
+            if(document.getElementById('subVar').checked) {
+                // Collect variable amounts
+                d.subCost = [];
+                const subInputs = document.querySelectorAll('.subInputVar');
+                subInputs.forEach(input => {
+                    d.subCost.push(parseFloat(input.value) || 0);
+                });
+            } else {
+                // Fixed amount
+                d.subCost = parseFloat(document.querySelector('.subInput').value) || 0;
+            }
+        }
+        return d;
+    }
+
+    function downloadFile(content, fileName, mimeType) {
+        const blob = new Blob([content], {type: mimeType});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+</script>
+
+</body>
+</html>
