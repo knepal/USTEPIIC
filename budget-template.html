@@ -54,7 +54,7 @@
         button.generate-btn:hover { background-color: #3b1a6e; }
         
         .justification-group { flex: 1; display: flex; gap: 10px; }
-        button.justification-btn { flex: 1; background-color: #444; color: white; padding: 15px; font-size: 1rem; border: none; cursor: pointer; border-radius: 5px; }
+        button.justification-btn { flex: 1; background-color: var(--ust-purple); color: white; padding: 15px; font-size: 1rem; border: none; cursor: pointer; border-radius: 5px; }
         button.justification-btn:hover { background-color: #222; }
 
         .dynamic-wrapper { border-left: 4px solid #ddd; padding-left: 15px; margin-top: 15px; padding-bottom: 10px; }
@@ -249,12 +249,12 @@
     <div class="action-bar">
         <button class="generate-btn" onclick="generateExcel()">Download Budget (.xls)</button>
         <div class="justification-group">
+           <button class="justification-btn" onclick="generateJustification()">Download Justification</button>
             <select id="justFormat">
                 <option value="docx">Word (.doc)</option>
                 <option value="md">Markdown (.md)</option>
                 <option value="tex">LaTeX (.tex)</option>
             </select>
-            <button class="justification-btn" onclick="generateJustification()">Get Justification</button>
         </div>
     </div>
 </div>
