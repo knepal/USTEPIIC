@@ -510,8 +510,12 @@
 
         // Subtotal A
         let subA = [];
-        for(let i=0; i<duration; i++) subA.push({val:0, formula:`=SUM(R${startRowA}C:R${currentRow-1}C)`});
-        subA.push({val:0, formula:`=SUM(RC[-${duration}]:RC[-1])`});
+        if(currentRow > startRowA) {
+            for(let i=0; i<duration; i++) subA.push({val:0, formula:`=SUM(R${startRowA}C:R${currentRow-1}C)`});
+            subA.push({val:0, formula:`=SUM(RC[-${duration}]:RC[-1])`});
+        } else {
+            for(let i=0; i<=duration; i++) subA.push({val:0});
+        }
         xml += addRow("Total Senior Personnel", subA, true, "DarkPurpleTotal");
         directCostSubtotals.push(currentRow-1);
 
@@ -562,8 +566,15 @@
         
         // Subtotal B
         let subB = [];
-        for(let i=0; i<duration; i++) subB.push({val:0, formula:`=SUM(R${startRowB}C:R${currentRow-1}C)`});
-        subB.push({val:0, formula:`=SUM(RC[-${duration}]:RC[-1])`});
+        // Check if any Other Personnel rows were added
+        if(currentRow > startRowB) {
+            // There are personnel rows to sum
+            for(let i=0; i<duration; i++) subB.push({val:0, formula:`=SUM(R${startRowB}C:R${currentRow-1}C)`});
+            subB.push({val:0, formula:`=SUM(RC[-${duration}]:RC[-1])`});
+        } else {
+            // No personnel rows - just put zeros
+            for(let i=0; i<=duration; i++) subB.push({val:0});
+        }
         xml += addRow("Total Other Personnel", subB, true, "DarkPurpleTotal");
         directCostSubtotals.push(currentRow-1);
 
@@ -609,8 +620,12 @@
         }
         let rowEquipTotal = currentRow; 
         let subD = [];
-        for(let i=0; i<duration; i++) subD.push({val:0, formula:`=SUM(R${startRowD}C:R${currentRow-1}C)`});
-        subD.push({val:0, formula:`=SUM(RC[-${duration}]:RC[-1])`});
+        if(currentRow > startRowD) {
+            for(let i=0; i<duration; i++) subD.push({val:0, formula:`=SUM(R${startRowD}C:R${currentRow-1}C)`});
+            subD.push({val:0, formula:`=SUM(RC[-${duration}]:RC[-1])`});
+        } else {
+            for(let i=0; i<=duration; i++) subD.push({val:0});
+        }
         xml += addRow("Total Equipment", subD, true, "DarkPurpleTotal");
         directCostSubtotals.push(currentRow-1);
 
@@ -729,8 +744,12 @@
         xml += addRow("Subawards", subRow);
         
         let subG = [];
-        for(let i=0; i<duration; i++) subG.push({val:0, formula:`=SUM(R${startRowG}C:R${currentRow-1}C)`});
-        subG.push({val:0, formula:`=SUM(RC[-${duration}]:RC[-1])`});
+        if(currentRow > startRowG) {
+            for(let i=0; i<duration; i++) subG.push({val:0, formula:`=SUM(R${startRowG}C:R${currentRow-1}C)`});
+            subG.push({val:0, formula:`=SUM(RC[-${duration}]:RC[-1])`});
+        } else {
+            for(let i=0; i<=duration; i++) subG.push({val:0});
+        }
         xml += addRow("Total Other Direct Costs", subG, true, "DarkPurpleTotal");
         directCostSubtotals.push(currentRow-1);
 
