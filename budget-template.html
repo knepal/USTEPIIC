@@ -2,17 +2,29 @@
 <html lang="en">
 <!--
     Author: Kundan Nepal
-    Date: 12/27/2025
+    Date: 01/28/2026
     Note: Self-contained HTML/JavaScript tool for generating research grant budgets.
           Supports multi-year projects with customizable personnel, equipment, travel,
           and participant support costs. 
-		  Outputs XML-based Excel files and Budget Justification documents in Word/Markdown/LaTex formats.
-		  Key Features:
+          Outputs XML-based Excel files and Budget Justification documents in Word/Markdown/LaTeX formats.
+          
+          Key Features:
+          - ✨ FULLY DYNAMIC: Change Start Month in Parameters → Spring/Fall months auto-recalculate → All Year 1 salaries update!
+          - Two-sheet Excel output: Parameters (editable values) and Budget Summary (formulas)
+          - Dynamic formulas in Parameters: Spring Months =IF($B$3<=5, 6-$B$3, 0), Fall Months =MAX(0, MIN(5, 13-$B$3))
+          - Faculty salaries properly calculated with 9-month base + additional duties
+          - Academic Year = Sept-May (9 months), Summer = June-Aug (3 months)
+          - Configurable rates (escalation, fringe, indirect, course release %)
+          - Date-based salary calculations with Sept 1 escalation (auto-calculated)
+          - Single-line entries for Staff, Postdocs, and Grad Students (no duplicate rows)
+          - All personnel reference Parameters sheet for easy editing
+          - Budget headers show date ranges based on start date (e.g., "Feb 2026 - Jan 2027")
           - Undergraduate fringe: 0% (Academic), 8% (Summer)
           - Graduate students: 8% fringe rate
-          - Faculty: 35% (Academic/Buyout), 8% (Summer)
-          - Staff: 35% fringe rate
-          - Indirect costs: 41.4% of MTDC (fixed)
+          - Faculty: 35% (Academic), 8% (Summer)
+          - Staff/Postdoc: 35% fringe rate
+          - All rates editable in Parameters sheet
+          - Indirect costs: configurable (default 41.4%)
           - All rates based on UST federally negotiated agreements
           - Dark purple subtotal formatting with currency (2 decimals)
 -->
@@ -76,7 +88,7 @@
     <div style="background: linear-gradient(135deg, #512698 0%, #6b3bb0 100%); padding: 30px; margin: -40px -40px 30px -40px; border-radius: 0;">
         <h1 style="color: white; margin: 0 0 8px 0; font-size: 2rem; font-weight: 600;">Grant Budget & Justification Toolkit</h1>
         <p style="color: rgba(255,255,255,0.9); margin: 0; font-size: 1rem;">School of Engineering | University of St. Thomas (MN)</p>
-        <p style="color: rgba(255,255,255,0.75); margin: 8px 0 0 0; font-size: 0.75rem; font-style: italic;">Last Updated: 12/27/2025</p>
+        <p style="color: rgba(255,255,255,0.75); margin: 8px 0 0 0; font-size: 0.75rem; font-style: italic;">Last Updated: 01/28/2026</p>
     </div>
     
 <div style="background: #f8f6fc; border-left: 4px solid #512698; padding: 15px 20px; margin: 0 0 25px 0; border-radius: 4px;">
@@ -88,9 +100,9 @@
     
     <div style="background: #fff8e1; border: 1px solid #ffd54f; border-left: 4px solid #ffa000; padding: 18px 20px; margin: 0 0 30px 0; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
         <p style="margin: 0 0 12px 0; font-weight: 600; color: #333; font-size: 1rem;">📋 Instructions:</p>
-        <p style="margin: 0 0 12px 0; line-height: 1.6; color: #444;">Enter budget information for each applicable expense category below. The tool will automatically calculate fringe benefits, annual escalation (3%), indirect costs (41.4%), and totals. Generate a detailed Excel budget spreadsheet and accompanying justification document in your preferred format (Word, Markdown or LaTex).</p>
+        <p style="margin: 0 0 12px 0; line-height: 1.6; color: #444;">Enter budget information for each applicable expense category below. Specify project duration in years and the start date (Month/Year format - assumes day 1 of the month). For senior personnel (PI, Co-PIs, and Other Faculty), you can indicate if they have additional contracts for duties such as Department Chair, Program Director, or Center Director. The tool will automatically calculate fringe benefits, annual escalation (3% starting Sept 1 each year), indirect costs (41.4%), and totals. Generate a detailed Excel budget spreadsheet with actual date ranges (e.g., "Feb 2026 - Jan 2027") and accompanying justification document in your preferred format (Word, Markdown or LaTeX).</p>
         <p style="margin: 0; font-style: italic; color: #666; font-size: 1rem; padding: 10px; background: white; border-radius: 3px;">
-            <strong style="color: #d84315;">⚠️ Note:</strong> This tool generates a preliminary budget and justification. Principal Investigators should carefully review all outputs for accuracy and completeness before submission. <strong>For NSF submission please make sure that the Budget Justification is no more than 5 pages.</strong>
+            <strong style="color: #d84315;">⚠️ Note:</strong> This tool generates a preliminary budget and justification. Principal Investigators should carefully review all outputs for accuracy and completeness before submission. Excel formulas are provided so you can adjust values as needed. <strong>For NSF submission please make sure that the Budget Justification is no more than 5 pages.</strong>
         </p>
     </div>
 	
@@ -101,8 +113,9 @@
                 <input type="number" id="duration" min="1" max="6" value="3" onchange="updateDurationUI()">
             </div>
             <div class="col">
-                <label>Start Year</label>
-                <input type="number" id="startYear" value="2026"> 
+                <label>Project Start Date (Month/Year)</label>
+                <input type="month" id="startDate" value="2026-01" onchange="updateStartDateInfo()">
+                <span class="sub-label" id="startDateInfo"></span>
             </div>
             <div class="col">
                 <label>Annual Escalation (%)</label>
@@ -119,6 +132,32 @@
             <div class="col">
                 <label>Base Salary (9-mo)</label>
                 <input type="number" id="piBase" value="100000">
+            </div>
+        </div>
+        
+        <div style="margin-top:15px; background: #fff3cd; padding:10px; border: 1px solid #ffc107;">
+            <label><input type="checkbox" id="piHasAddContract" onchange="toggleAdditionalContract('pi', this.checked)"> PI has Additional Contract for Additional Duties?</label>
+            <span class="sub-label">e.g., Department Chair, Program Director, Center Director</span>
+            <div id="piAddContractDetails" class="hidden" style="margin-top:10px;">
+                <div class="row">
+                    <div class="col">
+                        <label>Description of Additional Duties</label>
+                        <input type="text" id="piAddDuties" placeholder="e.g., Department Chair">
+                    </div>
+                    <div class="col">
+                        <label>Annual Stipend for Additional Duties</label>
+                        <input type="number" id="piAddStipend" value="0" placeholder="Annual amount">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <label>Additional Contract Type</label>
+                        <div style="margin-top:5px;">
+                            <label style="margin-right:20px;"><input type="radio" name="piAddContractType" value="9" id="piAddContract9"> 9-month</label>
+                            <label><input type="radio" name="piAddContractType" value="12" id="piAddContract12" checked> 12-month</label>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         
@@ -269,17 +308,50 @@
 </div>
 
 <script>
+    // Initialize global variables first
+    let tripCount = { domestic: 0, intl: 0 };
+    
     // --- UI Logic ---
-    document.getElementById('startYear').value = 2026;
-
     function updateDurationUI() {
-        const d = parseInt(document.getElementById('duration').value);
-        renderDynamicYears('piAcad', d);
-        renderDynamicYears('piSum', d);
-        renderDynamicYears('sub', d);
+        const duration = parseInt(document.getElementById('duration').value);
+        
+        // Re-render variable inputs if applicable
+        if(document.getElementById('piAcadVar').checked) renderDynamicYears('piAcad', duration);
+        if(document.getElementById('piSumVar').checked) renderDynamicYears('piSum', duration);
+        if(document.getElementById('subVar') && document.getElementById('subVar').checked) renderDynamicYears('sub', duration);
+        
+        // Re-render Co-PIs and Other Faculty if they exist
         renderCoPIs();
         renderOtherFaculty();
     }
+    
+    function updateStartDateInfo() {
+        const startDate = document.getElementById('startDate').value; // YYYY-MM format
+        const [year, month] = startDate.split('-');
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const monthName = monthNames[parseInt(month) - 1];
+        document.getElementById('startDateInfo').textContent = `${monthName} ${year}`;
+    }
+    
+    function toggleAdditionalContract(type, show) {
+        const details = document.getElementById(`${type}AddContractDetails`);
+        if (details) {
+            details.classList.toggle('hidden', !show);
+        }
+    }
+    
+    function toggleAdditionalContractDynamic(type, index, show) {
+        const details = document.getElementById(`${type}AddContractDetails_${index}`);
+        if (details) {
+            details.classList.toggle('hidden', !show);
+        }
+    }
+    
+    // Initialize on load
+    document.addEventListener('DOMContentLoaded', function() {
+        updateDurationUI();
+        updateStartDateInfo();
+    });
 
     function toggleInputs(prefix, isVar) {
         document.getElementById(prefix + 'Fixed').style.display = isVar ? 'none' : 'block';
@@ -319,8 +391,35 @@
         <div class="dynamic-wrapper">
             <div class="row">
                 <div class="col"><input type="text" id="${type}Name_${index}" placeholder="${label} Name"></div>
-                <div class="col"><input type="number" id="${type}Base_${index}" value="100000" placeholder="Base Salary"></div>
+                <div class="col"><input type="number" id="${type}Base_${index}" value="100000" placeholder="Base Salary (9-mo)"></div>
             </div>
+            
+            <div style="margin-top:10px; background: #fff3cd; padding:8px; border: 1px solid #ffc107; border-radius:3px;">
+                <label style="font-size:0.85rem;"><input type="checkbox" id="${type}HasAddContract_${index}" onchange="toggleAdditionalContractDynamic('${type}', ${index}, this.checked)"> Has Additional Contract for Additional Duties?</label>
+                <span style="display:block; font-size:0.75rem; color:#666; margin-left:20px;">e.g., Department Chair, Program Director, Center Director</span>
+                <div id="${type}AddContractDetails_${index}" class="hidden" style="margin-top:8px;">
+                    <div class="row">
+                        <div class="col">
+                            <label style="font-size:0.85rem;">Description of Additional Duties</label>
+                            <input type="text" id="${type}AddDuties_${index}" placeholder="e.g., Department Chair" style="font-size:0.85rem;">
+                        </div>
+                        <div class="col">
+                            <label style="font-size:0.85rem;">Annual Stipend</label>
+                            <input type="number" id="${type}AddStipend_${index}" value="0" placeholder="Annual amount" style="font-size:0.85rem;">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <label style="font-size:0.85rem;">Additional Contract Type</label>
+                            <div style="margin-top:3px;">
+                                <label style="margin-right:15px; font-size:0.85rem;"><input type="radio" name="${type}AddContractType_${index}" value="9"> 9-month</label>
+                                <label style="font-size:0.85rem;"><input type="radio" name="${type}AddContractType_${index}" value="12" checked> 12-month</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             <div class="row" style="margin-top:5px;">
                 <div class="col">
                     <label>Acad Buyout (Courses) (35% Fringe)</label>
@@ -369,7 +468,6 @@
         document.getElementById('equipContainer').innerHTML = html;
     }
 
-    let tripCount = { domestic: 0, intl: 0 };
     function addTravel(type) {
         const container = document.getElementById(type + 'TravelContainer');
         const i = tripCount[type]++;
@@ -396,21 +494,368 @@
         xml += '<Style ss:ID="Currency"><NumberFormat ss:Format="Currency"/></Style>';
         xml += '<Style ss:ID="Bold"><Font ss:Bold="1"/></Style>';
         xml += '<Style ss:ID="Total"><Font ss:Bold="1"/><Interior ss:Color="#FFFFCC" ss:Pattern="Solid"/><NumberFormat ss:Format="Currency"/></Style>';
-        xml += '<Style ss:ID="DarkPurpleTotal"><Font ss:FontName="Calibri" ss:Size="11" ss:Color="#FFFFFF" ss:Bold="1"/><Interior ss:Color="#512698" ss:Pattern="Solid"/><NumberFormat ss:Format="&quot;$&quot;#,##0.00"/></Style></Styles>';
+        xml += '<Style ss:ID="DarkPurpleTotal"><Font ss:FontName="Calibri" ss:Size="11" ss:Color="#FFFFFF" ss:Bold="1"/><Interior ss:Color="#512698" ss:Pattern="Solid"/><NumberFormat ss:Format="&quot;$&quot;#,##0.00"/></Style>';
+        xml += '<Style ss:ID="InputCell"><Interior ss:Color="#E7E6F7" ss:Pattern="Solid"/><NumberFormat ss:Format="&quot;$&quot;#,##0.00"/></Style>';
+        xml += '<Style ss:ID="PercentCell"><Interior ss:Color="#E7E6F7" ss:Pattern="Solid"/><NumberFormat ss:Format="0.00%"/></Style></Styles>';
 
+        // Get start date info for salary calculations
+        const startDateStr = document.getElementById('startDate').value; // YYYY-MM format
+        const [startYearStr, startMonthStr] = startDateStr.split('-');
+        const startYear = parseInt(startYearStr);
+        const startMonth = parseInt(startMonthStr); // 1-12
+        const startDate = new Date(startYear, startMonth - 1, 1); // Always day 1
+        
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        
+        let monthsToAugEnd = 0;
+        if (startMonth <= 8) {
+            monthsToAugEnd = 8 - startMonth + 1;
+        }
+
+        // Get today's date for budget creation date
+        const today = new Date();
+        const currentMonth = today.getMonth() + 1; // 1-12
+        const currentYear = today.getFullYear();
+        
+        // ========== SHEET 1: PARAMETERS ==========
+        xml += '<Worksheet ss:Name="Parameters"><Table>';
+        xml += '<Column ss:Width="250"/><Column ss:Width="100"/>';
+        
+        xml += '<Row ss:StyleID="Header"><Cell><Data ss:Type="String">Parameter</Data></Cell><Cell><Data ss:Type="String">Value</Data></Cell></Row>';
+        
+        let paramRow = 2;
+        
+        // Project Information
+        xml += '<Row><Cell ss:StyleID="SubHeader"><Data ss:Type="String">Project Information</Data></Cell><Cell></Cell></Row>';
+        paramRow++;
+        
+        let currentMonthRow = paramRow;
+        xml += `<Row><Cell><Data ss:Type="String">Current Month (Creating Budget)</Data></Cell><Cell><Data ss:Type="Number">${currentMonth}</Data></Cell></Row>`;
+        paramRow++;
+        
+        let currentYearRow = paramRow;
+        xml += `<Row><Cell><Data ss:Type="String">Current Year (Creating Budget)</Data></Cell><Cell><Data ss:Type="Number">${currentYear}</Data></Cell></Row>`;
+        paramRow++;
+        
+        xml += '<Row></Row>';
+        paramRow++;
+        
+        let startMonthRow = paramRow;
+        xml += `<Row><Cell><Data ss:Type="String">Project Start Month (1-12)</Data></Cell><Cell><Data ss:Type="Number">${startMonth}</Data></Cell></Row>`;
+        paramRow++;
+        
+        let startYearRow = paramRow;
+        xml += `<Row><Cell><Data ss:Type="String">Project Start Year</Data></Cell><Cell><Data ss:Type="Number">${startYear}</Data></Cell></Row>`;
+        paramRow++;
+        
+        let durationRow = paramRow;
+        xml += `<Row><Cell><Data ss:Type="String">Duration (Years)</Data></Cell><Cell><Data ss:Type="Number">${duration}</Data></Cell></Row>`;
+        paramRow++;
+        
+        xml += '<Row></Row>';
+        paramRow++;
+        
+        // Calculated escalation tracking
+        xml += '<Row><Cell ss:StyleID="SubHeader"><Data ss:Type="String">Escalation Tracking (Auto)</Data></Cell><Cell></Cell></Row>';
+        paramRow++;
+        
+        // Current AY start Sept year
+        let currentAYRow = paramRow;
+        let currentAYYear = currentMonth >= 9 ? currentYear : (currentMonth >= 6 ? currentYear : currentYear - 1);
+        xml += `<Row><Cell><Data ss:Type="String">Current Academic Year for salary (e.g. 2025 means AY 2025-26)</Data></Cell><Cell ss:Formula="=IF(R${currentMonthRow}C&gt;=9,R${currentYearRow}C,IF(R${currentMonthRow}C&gt;=6,R${currentYearRow}C,R${currentYearRow}C-1))"><Data ss:Type="Number">${currentAYYear}</Data></Cell></Row>`;
+        paramRow++;
+        
+        // Project Year 1 spring months and their escalation
+        let monthsSpringY1Row = paramRow;
+        xml += `<Row><Cell><Data ss:Type="String">Year 1 Spring Months (Start to May)</Data></Cell><Cell ss:Formula="=IF(R${startMonthRow}C&lt;=5,6-R${startMonthRow}C,IF(R${startMonthRow}C&lt;=8,0,18-R${startMonthRow}C))"><Data ss:Type="Number">0</Data></Cell></Row>`;
+        paramRow++;
+        
+        // Escalation for spring months (which AY Sept are they in?)
+        let springEscalationRow = paramRow;
+        let springAYYear = startMonth >= 9 ? startYear : startYear - 1;
+        let springEscalYears = springAYYear - currentAYYear;
+        xml += `<Row><Cell><Data ss:Type="String">Spring Escalation Years</Data></Cell><Cell ss:Formula="=IF(R${startMonthRow}C&gt;=9,R${startYearRow}C,R${startYearRow}C-1)-R${currentAYRow}C"><Data ss:Type="Number">${springEscalYears}</Data></Cell></Row>`;
+        paramRow++;
+        
+        // Project Year 1 fall months and their escalation  
+        let monthsFallY1Row = paramRow;
+        xml += `<Row><Cell><Data ss:Type="String">Year 1 Fall Months (Sept onward)</Data></Cell><Cell ss:Formula="=IF(R${startMonthRow}C&lt;=5,3+R${startMonthRow}C,IF(R${startMonthRow}C&lt;=8,9,R${startMonthRow}C-9))"><Data ss:Type="Number">0</Data></Cell></Row>`;
+        paramRow++;
+        
+        // Escalation for fall months (always next Sept)
+        let fallEscalationRow = paramRow;
+        let fallAYYear = startMonth >= 9 ? startYear + 1 : startYear;
+        let fallEscalYears = fallAYYear - currentAYYear;
+        xml += `<Row><Cell><Data ss:Type="String">Fall Escalation Years</Data></Cell><Cell ss:Formula="=IF(R${startMonthRow}C&gt;=9,R${startYearRow}C+1,R${startYearRow}C)-R${currentAYRow}C"><Data ss:Type="Number">${fallEscalYears}</Data></Cell></Row>`;
+        paramRow++;
+        
+        xml += '<Row></Row>';
+        paramRow++;
+        
+        // Budget Configuration Parameters
+        xml += '<Row><Cell ss:StyleID="SubHeader"><Data ss:Type="String">Budget Configuration</Data></Cell><Cell></Cell></Row>';
+        paramRow++;
+        
+        let courseReleaseRow = paramRow;
+        xml += '<Row><Cell><Data ss:Type="String">Course Release % of Base Salary</Data></Cell><Cell ss:StyleID="PercentCell"><Data ss:Type="Number">0.125</Data></Cell></Row>';
+        paramRow++;
+        
+        let fringeAcadRow = paramRow;
+        xml += '<Row><Cell><Data ss:Type="String">Fringe Rate - Academic Year (%)</Data></Cell><Cell ss:StyleID="PercentCell"><Data ss:Type="Number">0.35</Data></Cell></Row>';
+        paramRow++;
+        
+        let fringeSummerRow = paramRow;
+        xml += '<Row><Cell><Data ss:Type="String">Fringe Rate - Summer (%)</Data></Cell><Cell ss:StyleID="PercentCell"><Data ss:Type="Number">0.08</Data></Cell></Row>';
+        paramRow++;
+        
+        let fringeStaffRow = paramRow;
+        xml += '<Row><Cell><Data ss:Type="String">Fringe Rate - Staff/Postdoc (%)</Data></Cell><Cell ss:StyleID="PercentCell"><Data ss:Type="Number">0.35</Data></Cell></Row>';
+        paramRow++;
+        
+        let fringeGradRow = paramRow;
+        xml += '<Row><Cell><Data ss:Type="String">Fringe Rate - Graduate Student (%)</Data></Cell><Cell ss:StyleID="PercentCell"><Data ss:Type="Number">0.08</Data></Cell></Row>';
+        paramRow++;
+        
+        let fringeUGSummerRow = paramRow;
+        xml += '<Row><Cell><Data ss:Type="String">Fringe Rate - Undergrad Summer (%)</Data></Cell><Cell ss:StyleID="PercentCell"><Data ss:Type="Number">0.08</Data></Cell></Row>';
+        paramRow++;
+        
+        let escalationRow = paramRow;
+        xml += '<Row><Cell><Data ss:Type="String">Annual Escalation Rate (%)</Data></Cell><Cell ss:StyleID="PercentCell"><Data ss:Type="Number">0.03</Data></Cell></Row>';
+        paramRow++;
+        
+        let indirectRow = paramRow;
+        xml += '<Row><Cell><Data ss:Type="String">Indirect Cost Rate (%)</Data></Cell><Cell ss:StyleID="PercentCell"><Data ss:Type="Number">0.414</Data></Cell></Row>';
+        paramRow++;
+        
+        xml += '<Row></Row>'; // Blank row
+        paramRow++;
+        
+        // Store config row references
+        let configRows = {
+            courseRelease: courseReleaseRow,
+            fringeAcad: fringeAcadRow,
+            fringeSummer: fringeSummerRow,
+            fringeStaff: fringeStaffRow,
+            fringeGrad: fringeGradRow,
+            fringeUGSummer: fringeUGSummerRow,
+            escalation: escalationRow,
+            indirect: indirectRow
+        };
+        
+        // PI Parameters
+        xml += '<Row><Cell ss:StyleID="SubHeader"><Data ss:Type="String">PI - ' + (document.getElementById('piName').value || 'PI') + '</Data></Cell><Cell></Cell></Row>';
+        paramRow++;
+        
+        let piBaseRow = paramRow;
+        xml += '<Row><Cell><Data ss:Type="String">Base Salary (9-mo)</Data></Cell><Cell ss:StyleID="InputCell"><Data ss:Type="Number">' + document.getElementById('piBase').value + '</Data></Cell></Row>';
+        paramRow++;
+        
+        let piAddStipendRow = paramRow;
+        let piAddContractMonths = 9;
+        if(document.getElementById('piHasAddContract') && document.getElementById('piHasAddContract').checked) {
+            let addStipend = parseFloat(document.getElementById('piAddStipend').value) || 0;
+            let addDuties = document.getElementById('piAddDuties').value || "Additional Duties";
+            piAddContractMonths = parseInt(document.querySelector('input[name="piAddContractType"]:checked').value);
+            xml += '<Row><Cell><Data ss:Type="String">' + addDuties + ' Stipend (' + piAddContractMonths + '-mo)</Data></Cell><Cell ss:StyleID="InputCell"><Data ss:Type="Number">' + addStipend + '</Data></Cell></Row>';
+            paramRow++;
+        } else {
+            xml += '<Row><Cell><Data ss:Type="String">Additional Stipend</Data></Cell><Cell ss:StyleID="InputCell"><Data ss:Type="Number">0</Data></Cell></Row>';
+            paramRow++;
+        }
+        
+        // Calculate PI monthly rate
+        let piMonthlyRateRow = paramRow;
+        xml += '<Row><Cell><Data ss:Type="String">Monthly Salary Rate</Data></Cell><Cell ss:StyleID="Currency" ss:Formula="=R' + piBaseRow + 'C/9+R' + piAddStipendRow + 'C/' + piAddContractMonths + '"><Data ss:Type="Number">0</Data></Cell></Row>';
+        paramRow++;
+        
+        xml += '<Row></Row>'; // Blank row
+        paramRow++;
+        
+        // Store parameter rows for faculty
+        let facultyParams = [{
+            name: document.getElementById('piName').value || 'PI',
+            baseRow: piBaseRow,
+            stipendRow: piAddStipendRow,
+            monthlyRateRow: piMonthlyRateRow,
+            addContractMonths: piAddContractMonths
+        }];
+        
+        // Co-PIs Parameters
+        let nCo = parseInt(document.getElementById('numCoPIs').value);
+        for(let k=0; k<nCo; k++) {
+            let nm = document.getElementById(`copiName_${k}`).value || `Co-PI ${k+1}`;
+            xml += '<Row><Cell ss:StyleID="SubHeader"><Data ss:Type="String">Co-PI - ' + nm + '</Data></Cell><Cell></Cell></Row>';
+            paramRow++;
+            
+            let baseRow = paramRow;
+            xml += '<Row><Cell><Data ss:Type="String">Base Salary (9-mo)</Data></Cell><Cell ss:StyleID="InputCell"><Data ss:Type="Number">' + document.getElementById(`copiBase_${k}`).value + '</Data></Cell></Row>';
+            paramRow++;
+            
+            let addStipendRow = paramRow;
+            let addContractMonths = 9;
+            if(document.getElementById(`copiHasAddContract_${k}`) && document.getElementById(`copiHasAddContract_${k}`).checked) {
+                let addStipend = parseFloat(document.getElementById(`copiAddStipend_${k}`).value) || 0;
+                let addDuties = document.getElementById(`copiAddDuties_${k}`).value || "Additional Duties";
+                addContractMonths = parseInt(document.querySelector(`input[name="copiAddContractType_${k}"]:checked`).value);
+                xml += '<Row><Cell><Data ss:Type="String">' + addDuties + ' Stipend (' + addContractMonths + '-mo)</Data></Cell><Cell ss:StyleID="InputCell"><Data ss:Type="Number">' + addStipend + '</Data></Cell></Row>';
+            } else {
+                xml += '<Row><Cell><Data ss:Type="String">Additional Stipend</Data></Cell><Cell ss:StyleID="InputCell"><Data ss:Type="Number">0</Data></Cell></Row>';
+            }
+            paramRow++;
+            
+            let monthlyRateRow = paramRow;
+            xml += '<Row><Cell><Data ss:Type="String">Monthly Salary Rate</Data></Cell><Cell ss:StyleID="Currency" ss:Formula="=R' + baseRow + 'C/9+R' + addStipendRow + 'C/' + addContractMonths + '"><Data ss:Type="Number">0</Data></Cell></Row>';
+            paramRow++;
+            
+            facultyParams.push({
+                name: nm,
+                baseRow: baseRow,
+                stipendRow: addStipendRow,
+                monthlyRateRow: monthlyRateRow,
+                addContractMonths: addContractMonths
+            });
+            
+            xml += '<Row></Row>';
+            paramRow++;
+        }
+        
+        // Other Faculty Parameters
+        let nFac = parseInt(document.getElementById('numFac').value);
+        for(let k=0; k<nFac; k++) {
+            let nm = document.getElementById(`facName_${k}`).value || `Faculty ${k+1}`;
+            xml += '<Row><Cell ss:StyleID="SubHeader"><Data ss:Type="String">Other Faculty - ' + nm + '</Data></Cell><Cell></Cell></Row>';
+            paramRow++;
+            
+            let baseRow = paramRow;
+            xml += '<Row><Cell><Data ss:Type="String">Base Salary (9-mo)</Data></Cell><Cell ss:StyleID="InputCell"><Data ss:Type="Number">' + document.getElementById(`facBase_${k}`).value + '</Data></Cell></Row>';
+            paramRow++;
+            
+            let addStipendRow = paramRow;
+            let addContractMonths = 9;
+            if(document.getElementById(`facHasAddContract_${k}`) && document.getElementById(`facHasAddContract_${k}`).checked) {
+                let addStipend = parseFloat(document.getElementById(`facAddStipend_${k}`).value) || 0;
+                let addDuties = document.getElementById(`facAddDuties_${k}`).value || "Additional Duties";
+                addContractMonths = parseInt(document.querySelector(`input[name="facAddContractType_${k}"]:checked`).value);
+                xml += '<Row><Cell><Data ss:Type="String">' + addDuties + ' Stipend (' + addContractMonths + '-mo)</Data></Cell><Cell ss:StyleID="InputCell"><Data ss:Type="Number">' + addStipend + '</Data></Cell></Row>';
+            } else {
+                xml += '<Row><Cell><Data ss:Type="String">Additional Stipend</Data></Cell><Cell ss:StyleID="InputCell"><Data ss:Type="Number">0</Data></Cell></Row>';
+            }
+            paramRow++;
+            
+            let monthlyRateRow = paramRow;
+            xml += '<Row><Cell><Data ss:Type="String">Monthly Salary Rate</Data></Cell><Cell ss:StyleID="Currency" ss:Formula="=R' + baseRow + 'C/9+R' + addStipendRow + 'C/' + addContractMonths + '"><Data ss:Type="Number">0</Data></Cell></Row>';
+            paramRow++;
+            
+            facultyParams.push({
+                name: nm,
+                baseRow: baseRow,
+                stipendRow: addStipendRow,
+                monthlyRateRow: monthlyRateRow,
+                addContractMonths: addContractMonths
+            });
+            
+            xml += '<Row></Row>';
+            paramRow++;
+        }
+        
+        // Add Staff Base Salaries to Parameters
+        let nSt = parseInt(document.getElementById('numStaff').value);
+        let staffParams = [];
+        if(nSt > 0) {
+            xml += '<Row><Cell ss:StyleID="SubHeader"><Data ss:Type="String">Staff</Data></Cell><Cell></Cell></Row>';
+            paramRow++;
+            
+            for(let k=0; k<nSt; k++) {
+                let nm = document.getElementById(`staffName_${k}`).value || `Staff ${k+1}`;
+                let staffBase = parseFloat(document.getElementById(`staffBase_${k}`).value) || 0;
+                let effort = (parseFloat(document.getElementById(`staffEffort_${k}`).value) || 100) / 100;
+                
+                let staffRow = paramRow;
+                xml += `<Row><Cell><Data ss:Type="String">${nm} - Base Salary</Data></Cell><Cell ss:StyleID="InputCell"><Data ss:Type="Number">${staffBase}</Data></Cell></Row>`;
+                paramRow++;
+                
+                staffParams.push({name: nm, baseRow: staffRow, effort: effort});
+            }
+            xml += '<Row></Row>';
+            paramRow++;
+        }
+        
+        // Add PostDoc Base Salaries to Parameters
+        let nPd = parseInt(document.getElementById('numPostDocs').value);
+        let postdocParams = [];
+        if(nPd > 0) {
+            xml += '<Row><Cell ss:StyleID="SubHeader"><Data ss:Type="String">Postdoctoral Researchers</Data></Cell><Cell></Cell></Row>';
+            paramRow++;
+            
+            for(let k=0; k<nPd; k++) {
+                let nm = document.getElementById(`pdName_${k}`).value || `PostDoc ${k+1}`;
+                let pdBase = parseFloat(document.getElementById(`pdBase_${k}`).value) || 0;
+                
+                let pdRow = paramRow;
+                xml += `<Row><Cell><Data ss:Type="String">${nm} - Base Salary</Data></Cell><Cell ss:StyleID="InputCell"><Data ss:Type="Number">${pdBase}</Data></Cell></Row>`;
+                paramRow++;
+                
+                postdocParams.push({name: nm, baseRow: pdRow});
+            }
+            xml += '<Row></Row>';
+            paramRow++;
+        }
+        
+        // Add Graduate Student Stipends to Parameters
+        let nGr = parseInt(document.getElementById('numGrads').value);
+        let gradParams = [];
+        if(nGr > 0) {
+            xml += '<Row><Cell ss:StyleID="SubHeader"><Data ss:Type="String">Graduate Students</Data></Cell><Cell></Cell></Row>';
+            paramRow++;
+            
+            for(let k=0; k<nGr; k++) {
+                let nm = document.getElementById(`gradName_${k}`).value || `Graduate Student ${k+1}`;
+                let gradStipend = parseFloat(document.getElementById(`gradStipend_${k}`).value) || 0;
+                let annualStipend = gradStipend * 12;
+                
+                let gradRow = paramRow;
+                xml += `<Row><Cell><Data ss:Type="String">${nm} - Annual Stipend</Data></Cell><Cell ss:StyleID="InputCell"><Data ss:Type="Number">${annualStipend}</Data></Cell></Row>`;
+                paramRow++;
+                
+                gradParams.push({name: nm, stipendRow: gradRow});
+            }
+            xml += '<Row></Row>';
+            paramRow++;
+        }
+        
+        xml += '</Table></Worksheet>';
+        
+        // ========== SHEET 2: BUDGET SUMMARY ==========
         xml += '<Worksheet ss:Name="Budget Summary"><Table>';
         xml += '<Column ss:Width="200"/>';
         for(let i=0; i<=duration; i++) xml += '<Column ss:Width="85"/>'; 
         
-        // Header
+        // Header with date ranges (static text, not formulas)
         xml += '<Row ss:StyleID="Header"><Cell><Data ss:Type="String">Category</Data></Cell>';
-        let startYear = parseInt(document.getElementById('startYear').value);
-        for(let i=0; i<duration; i++) xml += `<Cell><Data ss:Type="String">Year ${startYear+i}</Data></Cell>`;
+        
+        // Generate headers showing actual date ranges
+        for(let i=0; i<duration; i++) {
+            let yearStartMonth = startMonth;
+            let yearStartYear = startYear + i;
+            let yearEndMonth = startMonth - 1;
+            let yearEndYear = startYear + i + 1;
+            
+            if(yearEndMonth <= 0) {
+                yearEndMonth = 12;
+                yearEndYear--;
+            }
+            
+            let startMonthName = monthNames[yearStartMonth - 1];
+            let endMonthName = monthNames[yearEndMonth - 1];
+            
+            xml += `<Cell><Data ss:Type="String">${startMonthName} ${yearStartYear} - ${endMonthName} ${yearEndYear}</Data></Cell>`;
+        }
         xml += '<Cell><Data ss:Type="String">Total</Data></Cell></Row>';
 
-        let currentRow = 2; // Track current row for formula references
-        let salaryRows = []; // Store object: {row: 5, type: 'fac-acad' | 'fac-sum' | 'staff' | 'student'} 
-        let directCostSubtotals = []; // Array of row indices for Section Totals (A, B, C...)
+        let currentRow = 2;
+        let salaryRows = [];
+        let directCostSubtotals = [];
 
         function addRow(label, values, isCurrency=true, styleID="") {
             let r = `<Row${styleID ? ' ss:StyleID="'+styleID+'"' : ''}><Cell><Data ss:Type="String">${label}</Data></Cell>`;
@@ -425,17 +870,107 @@
             return r;
         }
 
-        // Helper: Create Escalated Row Data
-        function getEscalatedRow(baseVal, formulaStr, isUndergrad=false) {
+        // Helper: Create salary row with proper academic year timing using Parameters sheet
+        // All calculations reference Parameters sheet for dynamic updates
+        function createAcademicSalaryRow(monthlyRateRef, courses, courseReleaseRef) {
+            let row = [];
+            
+            // Year 1: Use escalation factors from Parameters sheet
+            // Formula: (rate × (1+escal%)^SpringEscalYears × SpringMonths + rate × (1+escal%)^FallEscalYears × FallMonths) × course% × courses
+            row.push({val: 0, formula: `=(Parameters!R${monthlyRateRef}C2*(1+Parameters!R${configRows.escalation}C2)^Parameters!R${springEscalationRow}C2*Parameters!R${monthsSpringY1Row}C2 + Parameters!R${monthlyRateRef}C2*(1+Parameters!R${configRows.escalation}C2)^Parameters!R${fallEscalationRow}C2*Parameters!R${monthsFallY1Row}C2)*Parameters!R${courseReleaseRef}C2*${courses}`});
+            
+            // Years 2+: Just escalate Year 1
+            for(let i=1; i<duration; i++) {
+                if(i == 1) {
+                    // Year 2: Year 1 × (1 + escalation rate)
+                    row.push({val: 0, formula: `=RC[-1]*(1+Parameters!R${configRows.escalation}C2)`});
+                } else {
+                    // Year 3+: Year 1 × (1 + escalation rate)^i
+                    row.push({val: 0, formula: `=RC[-${i}]*(1+Parameters!R${configRows.escalation}C2)^${i}`});
+                }
+            }
+            
+            row.push({val:0, formula: `=SUM(RC[-${duration}]:RC[-1])`});
+            return row;
+        }
+        
+        // Helper: Create summer salary row (June-Aug, always 3 months)
+        function createSummerSalaryRow(monthlyRateRef, months) {
+            let row = [];
+            
+            // Year 1 Summer: Use spring escalation (summer follows spring semester)
+            row.push({val: 0, formula: `=Parameters!R${monthlyRateRef}C2*(1+Parameters!R${configRows.escalation}C2)^Parameters!R${springEscalationRow}C2*${months}`});
+            
+            // Years 2+: Escalate from Year 1
+            for(let i=1; i<duration; i++) {
+                if(i == 1) {
+                    // Year 2: Year 1 × (1 + escalation rate)
+                    row.push({val: 0, formula: `=RC[-1]*(1+Parameters!R${configRows.escalation}C2)`});
+                } else {
+                    // Year 3+: Year 1 × (1 + escalation rate)^i
+                    row.push({val: 0, formula: `=RC[-${i}]*(1+Parameters!R${configRows.escalation}C2)^${i}`});
+                }
+            }
+            
+            row.push({val:0, formula: `=SUM(RC[-${duration}]:RC[-1])`});
+            return row;
+        }
+        
+        // Helper: Simple escalation for costs (no date split)
+        function getSimpleEscalated(baseValue) {
+            let row = [{val: baseValue}];
+            for(let i=1; i<duration; i++) {
+                const esc = Math.pow(1.03, i);
+                row.push({val: 0, formula: `=RC[-1]*(1+Parameters!R${configRows.escalation}C2)`});
+            }
+            row.push({val:0, formula: `=SUM(RC[-${duration}]:RC[-1])`});
+            return row;
+        }
+        
+        // Helper: For staff/students - simpler escalation
+        function getEscalatedRow(baseRef, multiplier, isUndergrad=false) {
             let row = [];
             if(isUndergrad) {
-                // Year 1 is formula based on inputs
-                row.push({val: 0, formula: `=${formulaStr}`}); // Year 1
+                // Undergrad uses raw formula
+                row.push({val: 0, formula: `=${multiplier}`});
+                for(let i=1; i<duration; i++) {
+                    if(i == 1) {
+                        // Year 2: Year 1 × (1 + escalation)
+                        row.push({val: 0, formula: `=RC[-1]*(1+Parameters!R${configRows.escalation}C2)`});
+                    } else {
+                        // Year 3+: Year 1 × (1 + escalation)^i
+                        row.push({val: 0, formula: `=RC[-${i}]*(1+Parameters!R${configRows.escalation}C2)^${i}`});
+                    }
+                }
             } else {
-                row.push({val: 0, formula: `=${baseVal}*${formulaStr}`}); // Year 1
+                // Staff/Postdoc/Grad - calculate Year 1, then escalate
+                if(typeof baseRef === 'string' && baseRef.startsWith('R')) {
+                    // Reference to Parameters sheet
+                    row.push({val: 0, formula: `=Parameters!${baseRef}*${multiplier}`});
+                    for(let i=1; i<duration; i++) {
+                        if(i == 1) {
+                            // Year 2: Year 1 × (1 + escalation)
+                            row.push({val: 0, formula: `=RC[-1]*(1+Parameters!R${configRows.escalation}C2)`});
+                        } else {
+                            // Year 3+: Year 1 × (1 + escalation)^i
+                            row.push({val: 0, formula: `=RC[-${i}]*(1+Parameters!R${configRows.escalation}C2)^${i}`});
+                        }
+                    }
+                } else {
+                    // Direct value
+                    let val = parseFloat(baseRef) || 0;
+                    row.push({val: val});
+                    for(let i=1; i<duration; i++) {
+                        if(i == 1) {
+                            // Year 2: Year 1 × (1 + escalation)
+                            row.push({val: 0, formula: `=RC[-1]*(1+Parameters!R${configRows.escalation}C2)`});
+                        } else {
+                            // Year 3+: Year 1 × (1 + escalation)^i
+                            row.push({val: 0, formula: `=RC[-${i}]*(1+Parameters!R${configRows.escalation}C2)^${i}`});
+                        }
+                    }
+                }
             }
-            // Escalation 3%
-            for(let i=1; i<duration; i++) row.push({val: 0, formula: `=RC[-1]*1.03`});
             row.push({val:0, formula: `=SUM(RC[-${duration}]:RC[-1])`});
             return row;
         }
@@ -444,67 +979,50 @@
         xml += addRow("A. Senior Personnel", [], false, "SubHeader");
         let startRowA = currentRow;
 
-        // PI
-        let piBase = document.getElementById('piBase').value;
-        let piName = document.getElementById('piName').value || "PI";
-        
-        // PI Acad (Buyout 12.5% of base)
-        let piAcadData = [];
-        if(!document.getElementById('piAcadVar').checked) {
-             let courses = document.querySelector('.piAcadInput').value;
-             piAcadData = getEscalatedRow(piBase, `0.125*${courses}`);
-        } else {
-             let inputs = document.querySelectorAll('.piAcadInputVar');
-             for(let i=0; i<duration; i++) {
-                 let esc = Math.pow(1.03, i);
-                 piAcadData.push({val:0, formula: `=${piBase}*${esc.toFixed(4)}*0.125*${inputs[i].value}`});
-             }
-             piAcadData.push({val:0, formula: `=SUM(RC[-${duration}]:RC[-1])`});
-        }
-        xml += addRow(`${piName} (Academic)`, piAcadData);
-        salaryRows.push({row: currentRow-1, type: 'fac-acad', name: piName + " (Acad)"});
-
-        // PI Summer (1/9th per month)
-        let piSumData = [];
-        if(!document.getElementById('piSumVar').checked) {
-            let mo = document.querySelector('.piSumInput').value;
-            piSumData = getEscalatedRow(piBase, `(1/9)*${mo}`);
-        } else {
-            let inputs = document.querySelectorAll('.piSumInputVar');
-            for(let i=0; i<duration; i++) {
-                 let esc = Math.pow(1.03, i);
-                 piSumData.push({val:0, formula: `=${piBase}*${esc.toFixed(4)}/9*${inputs[i].value}`});
+        // Add faculty salary rows - only 2 rows per faculty (Academic and Summer)
+        for(let fi=0; fi<facultyParams.length; fi++) {
+            let fac = facultyParams[fi];
+            
+            // Get course buyout and summer effort
+            let courses, summerMonths;
+            if(fi === 0) {
+                // PI
+                if(!document.getElementById('piAcadVar').checked) {
+                    courses = parseFloat(document.querySelector('.piAcadInput').value) || 0;
+                } else {
+                    // Variable by year - use first year value for now
+                    let inputs = document.querySelectorAll('.piAcadInputVar');
+                    courses = parseFloat(inputs[0].value) || 0;
+                }
+                if(!document.getElementById('piSumVar').checked) {
+                    summerMonths = parseFloat(document.querySelector('.piSumInput').value) || 0;
+                } else {
+                    let inputs = document.querySelectorAll('.piSumInputVar');
+                    summerMonths = parseFloat(inputs[0].value) || 0;
+                }
+            } else if(fi <= nCo) {
+                // Co-PI
+                let idx = fi - 1;
+                courses = parseFloat(document.getElementById(`copiAcad_${idx}`).value) || 0;
+                summerMonths = parseFloat(document.getElementById(`copiSum_${idx}`).value) || 0;
+            } else {
+                // Other Faculty
+                let idx = fi - nCo - 1;
+                courses = parseFloat(document.getElementById(`facAcad_${idx}`).value) || 0;
+                summerMonths = parseFloat(document.getElementById(`facSum_${idx}`).value) || 0;
             }
-            piSumData.push({val:0, formula: `=SUM(RC[-${duration}]:RC[-1])`});
-        }
-        xml += addRow(`${piName} (Summer)`, piSumData);
-        salaryRows.push({row: currentRow-1, type: 'fac-sum', name: piName + " (Sum)"});
-
-        // Co-PIs
-        let nCo = document.getElementById('numCoPIs').value;
-        for(let k=0; k<nCo; k++) {
-            let nm = document.getElementById(`copiName_${k}`).value || `Co-PI ${k+1}`;
-            let bs = document.getElementById(`copiBase_${k}`).value;
             
-            // Acad
-            xml += addRow(`${nm} (Acad)`, getEscalatedRow(bs, `0.125*${document.getElementById(`copiAcad_${k}`).value}`));
-            salaryRows.push({row: currentRow-1, type: 'fac-acad', name: nm + " (Acad)"});
+            // Academic Year (Sept-May): Monthly Rate × 9 months × course% × courses
+            if(courses > 0) {
+                xml += addRow(`${fac.name} (Academic Year)`, createAcademicSalaryRow(fac.monthlyRateRow, courses, configRows.courseRelease));
+                salaryRows.push({row: currentRow-1, type: 'fac-acad', name: fac.name + " (Acad)"});
+            }
             
-            // Summer
-            xml += addRow(`${nm} (Sum)`, getEscalatedRow(bs, `(1/9)*${document.getElementById(`copiSum_${k}`).value}`));
-            salaryRows.push({row: currentRow-1, type: 'fac-sum', name: nm + " (Sum)"});
-        }
-        // Other Faculty
-        let nFac = document.getElementById('numFac').value;
-        for(let k=0; k<nFac; k++) {
-            let nm = document.getElementById(`facName_${k}`).value || `Fac ${k+1}`;
-            let bs = document.getElementById(`facBase_${k}`).value;
-            
-            xml += addRow(`${nm} (Acad)`, getEscalatedRow(bs, `0.125*${document.getElementById(`facAcad_${k}`).value}`));
-            salaryRows.push({row: currentRow-1, type: 'fac-acad', name: nm + " (Acad)"});
-            
-            xml += addRow(`${nm} (Sum)`, getEscalatedRow(bs, `(1/9)*${document.getElementById(`facSum_${k}`).value}`));
-            salaryRows.push({row: currentRow-1, type: 'fac-sum', name: nm + " (Sum)"});
+            // Summer (June-Aug): Monthly Rate × summer months
+            if(summerMonths > 0) {
+                xml += addRow(`${fac.name} (Summer)`, createSummerSalaryRow(fac.monthlyRateRow, summerMonths));
+                salaryRows.push({row: currentRow-1, type: 'fac-sum', name: fac.name + " (Sum)"});
+            }
         }
 
         // Subtotal A
@@ -523,34 +1041,82 @@
         let startRowB = currentRow;
         
         // Staff
-        let nSt = document.getElementById('numStaff').value;
-        for(let k=0; k<nSt; k++) {
-            let nm = document.getElementById(`staffName_${k}`).value || `Staff ${k+1}`;
-            let effort = (parseFloat(document.getElementById(`staffEffort_${k}`).value) || 100) / 100;
-            xml += addRow(nm, getEscalatedRow(document.getElementById(`staffBase_${k}`).value, effort));
-            salaryRows.push({row: currentRow-1, type: 'staff', name: nm});
+        for(let k=0; k<staffParams.length; k++) {
+            let staff = staffParams[k];
+            let effort = staff.effort;
+            
+            // Single row referencing Parameters sheet
+            let staffSalaryData = [];
+            // Year 1
+            staffSalaryData.push({val: 0, formula: `=Parameters!R${staff.baseRow}C2*${effort}`});
+            // Years 2+: Escalate from Year 1
+            for(let i=1; i<duration; i++) {
+                if(i == 1) {
+                    // Year 2: Year 1 × (1 + escalation rate)
+                    staffSalaryData.push({val: 0, formula: `=RC[-1]*(1+Parameters!R${configRows.escalation}C2)`});
+                } else {
+                    // Year 3+: Year 1 × (1 + escalation rate)^i
+                    staffSalaryData.push({val: 0, formula: `=RC[-${i}]*(1+Parameters!R${configRows.escalation}C2)^${i}`});
+                }
+            }
+            staffSalaryData.push({val: 0, formula: `=SUM(RC[-${duration}]:RC[-1])`});
+            xml += addRow(`${staff.name} (${(effort*100).toFixed(0)}% effort)`, staffSalaryData);
+            salaryRows.push({row: currentRow-1, type: 'staff', name: staff.name});
         }
+        
         // Post-Docs
-        let nPd = document.getElementById('numPostDocs').value;
-        for(let k=0; k<nPd; k++) {
-            let nm = document.getElementById(`pdName_${k}`).value || `PostDoc ${k+1}`;
-            xml += addRow(nm, getEscalatedRow(document.getElementById(`pdBase_${k}`).value, `1`));
-            salaryRows.push({row: currentRow-1, type: 'staff', name: nm});
+        for(let k=0; k<postdocParams.length; k++) {
+            let pd = postdocParams[k];
+            
+            // Single row referencing Parameters sheet
+            let pdSalaryData = [];
+            // Year 1
+            pdSalaryData.push({val: 0, formula: `=Parameters!R${pd.baseRow}C2`});
+            // Years 2+: Escalate from Year 1
+            for(let i=1; i<duration; i++) {
+                if(i == 1) {
+                    // Year 2: Year 1 × (1 + escalation rate)
+                    pdSalaryData.push({val: 0, formula: `=RC[-1]*(1+Parameters!R${configRows.escalation}C2)`});
+                } else {
+                    // Year 3+: Year 1 × (1 + escalation rate)^i
+                    pdSalaryData.push({val: 0, formula: `=RC[-${i}]*(1+Parameters!R${configRows.escalation}C2)^${i}`});
+                }
+            }
+            pdSalaryData.push({val: 0, formula: `=SUM(RC[-${duration}]:RC[-1])`});
+            xml += addRow(pd.name, pdSalaryData);
+            salaryRows.push({row: currentRow-1, type: 'staff', name: pd.name});
         }
+        
         // Grads
-        let nGr = document.getElementById('numGrads').value;
-        for(let k=0; k<nGr; k++) {
-            let nm = document.getElementById(`gradName_${k}`).value || `Grad ${k+1}`;
-            xml += addRow(nm, getEscalatedRow(document.getElementById(`gradStipend_${k}`).value * 12, `1`));
-            salaryRows.push({row: currentRow-1, type: 'student', name: nm});
+        for(let k=0; k<gradParams.length; k++) {
+            let grad = gradParams[k];
+            
+            // Single row referencing Parameters sheet
+            let gradSalaryData = [];
+            // Year 1
+            gradSalaryData.push({val: 0, formula: `=Parameters!R${grad.stipendRow}C2`});
+            // Years 2+: Escalate from Year 1
+            for(let i=1; i<duration; i++) {
+                if(i == 1) {
+                    // Year 2: Year 1 × (1 + escalation rate)
+                    gradSalaryData.push({val: 0, formula: `=RC[-1]*(1+Parameters!R${configRows.escalation}C2)`});
+                } else {
+                    // Year 3+: Year 1 × (1 + escalation rate)^i
+                    gradSalaryData.push({val: 0, formula: `=RC[-${i}]*(1+Parameters!R${configRows.escalation}C2)^${i}`});
+                }
+            }
+            gradSalaryData.push({val: 0, formula: `=SUM(RC[-${duration}]:RC[-1])`});
+            xml += addRow(grad.name, gradSalaryData);
+            salaryRows.push({row: currentRow-1, type: 'student', name: grad.name});
         }
+        
         // Undergrads - Split into Academic and Summer for different fringe rates
-        let nUg = document.getElementById('numUndergrads').value;
+        let nUg = parseInt(document.getElementById('numUndergrads').value);
         for(let k=0; k<nUg; k++) {
             let nm = document.getElementById(`ugName_${k}`).value || `Undergrad ${k+1}`;
-            let rate = document.getElementById(`ugRate_${k}`).value;
-            let ha = document.getElementById(`ugHrsAcad_${k}`).value;
-            let hs = document.getElementById(`ugHrsSum_${k}`).value;
+            let rate = parseFloat(document.getElementById(`ugRate_${k}`).value);
+            let ha = parseFloat(document.getElementById(`ugHrsAcad_${k}`).value);
+            let hs = parseFloat(document.getElementById(`ugHrsSum_${k}`).value);
             
             // Academic Year: rate * (ha * 36 weeks) - 0% fringe
             let formStrAcad = `${rate}*(${ha}*36)`;
@@ -581,18 +1147,38 @@
         xml += addRow("C. Fringe Benefits", [], false, "SubHeader");
         let startRowC = currentRow;
         
-        // Detailed Line Items based on Type
+        // Detailed Line Items based on Type - using configurable rates from Parameters
         salaryRows.forEach(item => {
-            let rate = 0;
-            // CORRECTED LOGIC:
-            if(item.type === 'fac-acad' || item.type === 'staff') rate = 0.35; // 35% for AY and Staff
-            if(item.type === 'fac-sum' || item.type === 'student') rate = 0.08; // 8% for Faculty Summer and Grad Students
-            if(item.type === 'ug-acad') rate = 0.00; // 0% for Undergrad Academic Year
-            if(item.type === 'ug-sum') rate = 0.08; // 8% for Undergrad Summer
+            let rateRef = '';
+            let rateLabel = '';
+            // Use Parameters sheet references for fringe rates
+            if(item.type === 'fac-acad') {
+                rateRef = `Parameters!R${configRows.fringeAcad}C2`;
+                rateLabel = 'Acad';
+            } else if(item.type === 'fac-sum') {
+                rateRef = `Parameters!R${configRows.fringeSummer}C2`;
+                rateLabel = 'Summer';
+            } else if(item.type === 'staff') {
+                rateRef = `Parameters!R${configRows.fringeStaff}C2`;
+                rateLabel = 'Staff';
+            } else if(item.type === 'student') {
+                rateRef = `Parameters!R${configRows.fringeGrad}C2`;
+                rateLabel = 'Grad';
+            } else if(item.type === 'ug-acad') {
+                // 0% for undergrad academic year
+                let fRows = [];
+                for(let i=0; i<duration; i++) fRows.push({val:0});
+                fRows.push({val:0, formula:`=SUM(RC[-${duration}]:RC[-1])`});
+                xml += addRow(`Fringe - ${item.name} (0%)`, fRows);
+                return; // Skip the rest
+            } else if(item.type === 'ug-sum') {
+                rateRef = `Parameters!R${configRows.fringeUGSummer}C2`;
+                rateLabel = 'UG Summer';
+            }
             
-            let label = `Fringe - ${item.name} (${(rate*100).toFixed(0)}%)`;
+            let label = `Fringe - ${item.name} (${rateLabel})`;
             let fRows = [];
-            for(let i=0; i<duration; i++) fRows.push({val:0, formula:`=R${item.row}C*${rate}`});
+            for(let i=0; i<duration; i++) fRows.push({val:0, formula:`=R${item.row}C*${rateRef}`});
             fRows.push({val:0, formula:`=SUM(RC[-${duration}]:RC[-1])`});
             xml += addRow(label, fRows);
         });
@@ -607,11 +1193,11 @@
         // --- D. EQUIPMENT ---
         xml += addRow("D. Equipment", [], false, "SubHeader");
         let startRowD = currentRow;
-        let nEq = document.getElementById('numEquip').value;
-        if(nEq == 0) xml += addRow("None", getEscalatedRow(0,`0`));
+        let nEq = parseInt(document.getElementById('numEquip').value);
+        if(nEq == 0) xml += addRow("None", getSimpleEscalated(0));
         for(let k=0; k<nEq; k++) {
             let nm = document.getElementById(`equipName_${k}`).value || `Item ${k+1}`;
-            let cost = document.getElementById(`equipCost_${k}`).value;
+            let cost = parseFloat(document.getElementById(`equipCost_${k}`).value);
             let rData = [{val:cost}]; // Year 1 only
             for(let i=1; i<duration; i++) rData.push({val:0});
             rData.push({val:0, formula:`=SUM(RC[-${duration}]:RC[-1])`});
@@ -698,10 +1284,19 @@
         // --- F. PARTICIPANT SUPPORT ---
         xml += addRow("F. Participant Support Costs", [], false, "SubHeader");
         let startRowF = currentRow;
-        xml += addRow("Stipends", getEscalatedRow(document.getElementById('partStipend').value, `1`));
-        xml += addRow("Travel", getEscalatedRow(document.getElementById('partTravel').value, `1`));
-        xml += addRow("Subsistence", getEscalatedRow(document.getElementById('partSub').value, `1`));
-        xml += addRow("Other", getEscalatedRow(document.getElementById('partOther').value, `1`));
+        
+        // Add single escalating rows for each participant cost
+        let partStipendBase = parseFloat(document.getElementById('partStipend').value) || 0;
+        xml += addRow("Stipends", getSimpleEscalated(partStipendBase));
+        
+        let partTravelBase = parseFloat(document.getElementById('partTravel').value) || 0;
+        xml += addRow("Travel", getSimpleEscalated(partTravelBase));
+        
+        let partSubBase = parseFloat(document.getElementById('partSub').value) || 0;
+        xml += addRow("Subsistence", getSimpleEscalated(partSubBase));
+        
+        let partOtherBase = parseFloat(document.getElementById('partOther').value) || 0;
+        xml += addRow("Other", getSimpleEscalated(partOtherBase));
         
         let subF = [];
         for(let i=0; i<duration; i++) subF.push({val:0, formula:`=SUM(R${startRowF}C:R${currentRow-1}C)`});
@@ -713,17 +1308,25 @@
         // --- G. OTHER DIRECT ---
         xml += addRow("G. Other Direct Costs", [], false, "SubHeader");
         let startRowG = currentRow;
-        xml += addRow("Materials & Supplies", getEscalatedRow(document.getElementById('costMaterials').value, `1`));
-        xml += addRow("Publication Costs", getEscalatedRow(document.getElementById('costPubs').value, `1`));
-        xml += addRow("Consultant Services", getEscalatedRow(document.getElementById('costConsultants').value, `1`));
-        xml += addRow("Computer Services", getEscalatedRow(document.getElementById('costComputer').value, `1`));
         
-        // Tuition
+        // Add single escalating rows for each cost
+        let matBase = parseFloat(document.getElementById('costMaterials').value) || 0;
+        xml += addRow("Materials & Supplies", getSimpleEscalated(matBase));
+        
+        let pubBase = parseFloat(document.getElementById('costPubs').value) || 0;
+        xml += addRow("Publication Costs", getSimpleEscalated(pubBase));
+        
+        let consBase = parseFloat(document.getElementById('costConsultants').value) || 0;
+        xml += addRow("Consultant Services", getSimpleEscalated(consBase));
+        
+        let compBase = parseFloat(document.getElementById('costComputer').value) || 0;
+        xml += addRow("Computer Services", getSimpleEscalated(compBase));
+        
+        // Tuition (reuse nGr from earlier)
         let gradTuitionCount = 0;
         for(let k=0; k<nGr; k++) if(document.getElementById(`gradTuition_${k}`).value == "1") gradTuitionCount++;
-        let tCost = gradTuitionCount * document.getElementById('tuitionRate').value * 7;
-        let tRow = getEscalatedRow(tCost, `1.03`); // Tuition increases
-        xml += addRow("Tuition Remission", tRow);
+        let tCostBase = gradTuitionCount * parseFloat(document.getElementById('tuitionRate').value) * 7;
+        xml += addRow("Tuition Remission", getSimpleEscalated(tCostBase));
         let rowTuition = currentRow-1;
 
         // Subawards
@@ -804,9 +1407,9 @@
 
         // IDC
         let idcData = [];
-        for(let i=0; i<duration; i++) idcData.push({val:0, formula:`=R[-1]C*0.414`});
+        for(let i=0; i<duration; i++) idcData.push({val:0, formula:`=R[-1]C*Parameters!R${configRows.indirect}C2`});
         idcData.push({val:0, formula:`=SUM(RC[-${duration}]:RC[-1])`});
-        xml += addRow("Indirect Costs (41.4%)", idcData);
+        xml += addRow("Indirect Costs", idcData);
 
         // TOTAL
         let totData = [];
