@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facilities, Equipment and Other Resources Generator</title>
+<style>
+:root { --ust-purple:#512698; --ust-purple-dark:#3b1b6f; --bg-light:#f4f4f9; }
+body { font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; background:var(--bg-light); margin:0; padding:20px; color:#333; }
+.container { max-width:1000px; margin:0 auto; background:#fff; padding:30px; border-radius:10px; box-shadow:0 4px 15px rgba(0,0,0,0.1); }
+h1 { color:var(--ust-purple); text-align:center; border-bottom:2px solid var(--ust-purple); padding-bottom:10px; margin-bottom:5px; }
+.subtitle { text-align:center; color:#666; margin-bottom:20px; font-style:italic; }
+.note-box { background:#f8f6fc; border-left:4px solid var(--ust-purple); padding:14px 18px; border-radius:4px; margin-bottom:22px; font-size:0.92rem; line-height:1.6; }
+.controls { display:flex; flex-wrap:wrap; gap:20px; align-items:center; padding:14px 18px; background:#faf8fd; border:1px solid #e5ddf2; border-radius:6px; margin-bottom:20px; }
+.controls label.field { font-weight:600; color:var(--ust-purple); font-size:0.92rem; }
+select, input[type="text"] { padding:8px 10px; font-size:0.95rem; border:1px solid #ccc; border-radius:4px; font-family:inherit; }
+.category-header { background:#eee; padding:10px 14px; font-weight:bold; margin-top:22px; border-radius:5px; color:var(--ust-purple); display:flex; justify-content:space-between; align-items:center; }
+.category-header .mini { font-size:0.78rem; font-weight:normal; }
+.mini button { background:none; border:none; color:var(--ust-purple); cursor:pointer; font-size:0.78rem; text-decoration:underline; padding:0 6px; }
+.checkbox-group { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px; }
+.checkbox-item { background:#fff; border:1px solid #ddd; padding:10px; border-radius:5px; display:flex; align-items:flex-start; cursor:pointer; transition:0.2s; font-size:0.93rem; }
+.checkbox-item:hover { background:#f9f0ff; border-color:var(--ust-purple); }
+input[type="checkbox"] { transform:scale(1.15); margin-right:10px; margin-top:3px; accent-color:var(--ust-purple); flex-shrink:0; }
+.loc { display:block; font-size:0.76rem; color:#888; margin-top:2px; }
+.actions { margin-top:30px; text-align:center; padding-top:20px; border-top:2px solid #eee; }
+button.dl { background:var(--ust-purple); color:#fff; border:none; padding:12px 24px; font-size:16px; border-radius:5px; cursor:pointer; margin:5px; font-weight:600; }
+button.dl:hover { background:var(--ust-purple-dark); }
+button.dl.secondary { background:#666; }
+textarea { width:100%; box-sizing:border-box; padding:10px; font-family:inherit; font-size:0.93rem; border:1px solid #ccc; border-radius:4px; min-height:80px; }
+.count { text-align:center; color:#666; font-size:0.9rem; margin-top:10px; }
+@media (max-width:700px){ .checkbox-group { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+
+<div class="container">
+<h1>Facilities, Equipment and Other Resources</h1>
+<div class="subtitle">University of St. Thomas, College of Engineering</div>
+
+<div class="note-box">
+Select the resources relevant to your project, choose the sponsor format, then download. Text shown in <span style="color:#0000CC;font-style:italic">blue italics</span> in the generated document marks places where you must add project-specific detail before submission. Always check the solicitation or funding opportunity announcement, since agencies differ in what belongs in this document and whether equipment must be itemized separately.
+</div>
+
+<div class="controls">
+  <span><label class="field" for="agency">Sponsor format:</label>
+  <select id="agency">
+    <option value="nsf">NSF (Facilities, Equipment and Other Resources)</option>
+    <option value="nih">NIH (Facilities &amp; Other Resources, by category)</option>
+    <option value="plain">Plain list (no agency headings)</option>
+  </select></span>
+  <span><label class="field" for="detail">Detail level:</label>
+  <select id="detail">
+    <option value="full">Full technical detail</option>
+    <option value="brief">Brief summary only</option>
+  </select></span>
+  <span><label class="field" for="pi">PI name (optional):</label>
+  <input type="text" id="pi" placeholder="e.g., Dr. Jane Smith" size="20"></span>
+</div>
+
+<div id="form-container"></div>
+
+<div class="category-header" style="margin-top:26px;">Project-Specific Text (optional)</div>
+<p style="font-size:0.88rem;color:#666;margin:8px 0;">Anything entered here is appended as a closing paragraph. Use it to tie the listed resources to the specific aims of your project, which is what reviewers actually score.</p>
+<textarea id="custom" placeholder="Example: The proposed work will be carried out primarily in the Embedded Systems and Intelligent Robots Lab, with device characterization performed in the Materials Lab and power testing at the Center for Microgrid Research..."></textarea>
+
+<div class="actions">
+  <button class="dl" onclick="download('docx')">Download Word (.doc)</button>
+  <button class="dl" onclick="download('md')">Download Markdown (.md)</button>
+  <button class="dl" onclick="download('tex')">Download LaTeX (.tex)</button>
+  <button class="dl secondary" onclick="selectAll(true)">Select All</button>
+  <button class="dl secondary" onclick="selectAll(false)">Clear All</button>
+  <div class="count" id="count">0 resources selected</div>
+</div>
+</div>
+
+<script>
+// nih: L=Laboratory, C=Computer/Computational, O=Office, X=Other
+const DATA = {
+
+/* ---------------- CENTERS ---------------- */
+cmr: { group:"Centers of Excellence", nih:"L", title:"Center for Microgrid Research", loc:"Facilities and Design Center",
+ brief:"An industry-grade 480 Vac research microgrid with full-power test bays, hardware-in-the-loop platforms, and precision power instrumentation, available for grid-connected and islanded testing of distributed energy resources.",
+ full:"The Center for Microgrid Research operates a real-world, industry-grade microgrid on the St. Paul campus, one of the few student-focused microgrid research facilities in the United States. The system is a three-phase, four-wire, 480 Vac microgrid that can operate grid-connected, islanded, and in seamless transition between the two modes.\n\nGeneration and storage assets include a 48 kWdc rooftop photovoltaic array coupled through a three-phase 480 Vac Princeton Power GTIB-125 inverter capable of 0 to 1 leading and lagging power factor operation; a 500 Vdc, 396 kWh valve-regulated lead acid battery bank served by a bidirectional Princeton Power GTIB-125 inverter capable of both grid-following and grid-forming operation; and a 50 kW Cummins diesel genset (C50D6C/UC2F) under Woodward EasyGen 3200XT control. Utility interconnection is through a 300 kVA 13.8 kV to 480 V substation transformer under an executed interconnection agreement with Xcel Energy. Loading is provided by a computer-controlled three-phase 320 kVA RL load bank adjustable in 1 kVA steps at 0.8 to 1.0 lagging power factor. Protection and automation are implemented with SEL-451 protection, automation and bay control systems and SEL-3355 real-time automation controllers.\n\nThe Center provides indoor and outdoor test bays at 480/208 V three-phase and 120 V single-phase, allowing external hardware to be connected for full-power testing up to 125 kW. Cyber-physical and hardware-in-the-loop capabilities include relay-in-the-loop, controller-in-the-loop, and power-hardware-in-the-loop testing up to 30 kVA at 480 Vac or 22 kW at 400 Vdc, built around an OPAL-RT OP4510 real-time simulator and an Ametek MX-30 power amplifier, with models implemented in MATLAB/Simulink or HYPERSIM.\n\nSource and load emulation equipment includes an Ametek TerraSAS photovoltaic array simulator rated to 45 kWdc and 600 Vdc with high-resolution I-V curve simulation under static and dynamic irradiance and temperature conditions; an NH Research NHR 9300 bidirectional high-voltage battery and charger emulator delivering up to 100 kW at up to 1200 Vdc; an Ametek MX-30 operating in ac mode from 0 to 300 Vac line-to-neutral over 16 to 819 Hz at up to 30 kVA three-phase, and in dc mode from 0 to 400 Vdc; Magna-Power TSD600-40 (25 kWdc, 0 to 600 Vdc, 0 to 40 Adc) and TSA1000-10 (10 kWdc, 0 to 1000 Vdc, 0 to 10 Adc) dc supplies; and a Pacific Power 360 AMXT ac source rated 6 kVA over 0 to 338 Vac line-to-neutral and 45 to 5000 Hz.\n\nInstrumentation spans sample rates from a few samples per second to gigasamples per second and includes Yokogawa WT3000E and Fluke 435 power quality analyzers, LeCroy 20 GS/s four-channel oscilloscopes, high-resolution relay oscillography, and GPS-disciplined time stamping. The Center routinely supports pre-compliance testing against IEEE 1547-2018 and 1547.1-2020, UL 1741 and UL 1741 SA, IEEE 2030.7, IEC 61000-3-2 and 3-12 for harmonics, and IEC 61000-3-3 and 3-11 for flicker. A second microgrid installation funded through more than $20 million in federal and state support is under construction and will extend distribution to additional campus buildings.",
+ todo:"Confirm current availability, scheduling, and any recharge rates with the Center Director, and state which specific assets your project will use." },
+
+cam: { group:"Centers of Excellence", nih:"L", title:"Center for Advanced Manufacturing", loc:"Schoenecker Center and Facilities and Design Center",
+ brief:"Applied research and workforce development center focused on AI and smart manufacturing, additive manufacturing, and software-enhanced machining optimization.",
+ full:"The Center for Advanced Manufacturing supports the domestic manufacturing base through applied research and workforce development in artificial intelligence and smart manufacturing technologies, additive manufacturing, and software-enhanced machining optimization. The Center draws on the machining, metrology, and prototyping infrastructure of the College of Engineering and maintains active industry partnerships across the Twin Cities manufacturing corridor.\n\nThe Center is the Twin Cities hub for the Department of Defense America's Cutting Edge (ACE) program and for the Machining AdvantEdge modeling and CNC optimization program, delivering no-cost hands-on bootcamps on production CNC equipment to high school students, undergraduates, and incumbent workers seeking to reskill. This infrastructure provides a ready mechanism for broader impacts, workforce development, and outreach components of sponsored projects. Graduate credentialing tied to the Center includes a Graduate Certificate in Advanced Manufacturing and micro-credentials in Manufacturing AI and in Statistical Quality Control and Design of Experiments.",
+ todo:"Name the specific processes, machines, or training pathways your project will use." },
+
+cee: { group:"Centers of Excellence", nih:"X", title:"Center for Engineering Education", loc:"College of Engineering",
+ brief:"Center supporting PK-12 engineering education, teacher professional development, and STEM outreach programming.",
+ full:"The Center for Engineering Education prepares current and future PK-12 educators to teach STEM subjects with an emphasis on engineering practice, and works to raise engineering literacy among K-12 students. The Center delivers a Graduate Certificate in Engineering Education with an Integrating STEM emphasis, whose credits apply toward a Master of Arts in Educational Studies with an engineering education concentration, and provides custom professional development designed around individual school and district needs.\n\nThe Center also operates direct-to-student outreach, including the Science, Technology and Engineering Preview Summer (STEPS) program for sixth through eighth grade girls. For sponsored projects, the Center provides established recruitment channels into regional school districts, experienced facilitators for teacher professional development, and an existing evaluation footprint, all of which can support broader impacts and education and outreach plans without building new infrastructure.",
+ todo:"Describe the specific outreach or education activity, target population, and anticipated numbers." },
+
+appliedAI: { group:"Centers of Excellence", nih:"C", title:"Center for Applied Artificial Intelligence", loc:"College of Engineering and Department of Software Engineering and Data Science",
+ brief:"Industry-facing center pairing faculty and graduate students with companies on practical data science and machine learning problems.",
+ full:"The Center for Applied Artificial Intelligence provides a structured venue for industry to work on practical data science and machine learning problems in collaboration with University faculty and graduate students. The Center draws on graduate programs in Artificial Intelligence, Data Science, Software Engineering, and Information Technology, giving sponsored projects access to a standing pool of graduate researchers with applied machine learning training.\n\nFor projects with a computational or data-analytic component, the Center supplies domain expertise in model development, evaluation methodology, and deployment, and provides an established mechanism for industry data-sharing agreements and collaborative project scoping.",
+ todo:"Specify computational needs, data volumes, model classes, and any data use or sharing agreements required." },
+
+startCenter: { group:"Centers of Excellence", nih:"L", title:"St. Thomas Applied and Renewable Technology (START) Center", loc:"College of Engineering",
+ brief:"Center supporting applied research and student project work in renewable and sustainable technology.",
+ full:"The St. Thomas Applied and Renewable Technology (START) Center supports applied research, student project work, and industry engagement in renewable and sustainable technology. The Center provides project management structure, faculty mentorship, and a pathway for translating applied research results into deployable prototypes.",
+ todo:"Describe the specific technology area and the Center resources your project will draw on." },
+
+/* ---------------- MAJOR FACILITIES ---------------- */
+schoenecker: { group:"Buildings and Major Facilities", nih:"O", title:"Schoenecker Center", loc:"St. Paul south campus",
+ brief:"Interdisciplinary STEAM facility opened in Spring 2024 housing the majority of engineering teaching and research laboratories.",
+ full:"The Schoenecker Center, opened in Spring 2024, is the University's interdisciplinary home for science, technology, engineering, arts and mathematics. It houses the majority of the College of Engineering teaching and research laboratories alongside sciences and arts programs, and was purpose-built to place laboratory activity in public view from circulation space and the building atrium.\n\nThe building provides flexible laboratory bays, shared collaboration and meeting space, and modern mechanical and electrical service, including specialty electrical connections, compressed air, and dedicated safety systems in laboratory spaces. Across the St. Paul south campus, the College of Engineering occupies more than 400,000 square feet dedicated to STEM education and research spread across the Schoenecker Center, the Facilities and Design Center, and O'Shaughnessy Science Hall, comprising more than 35 dedicated laboratories.",
+ todo:"" },
+
+iversen: { group:"Buildings and Major Facilities", nih:"L", title:"Iversen Structural High Bay and Structures Laboratory", loc:"Schoenecker Center",
+ brief:"A 5,000 square foot structural testing facility with an L-shaped reaction wall and strong floor and hydraulic actuators rated to 200,000 pounds in all three principal axes.",
+ full:"The Iversen Structural High Bay is a 5,000 square foot large-scale structural testing and demonstration facility built around an L-shaped reaction wall and reinforced concrete strong floor. The facility is served by hydraulic actuators capable of applying up to 200,000 pounds of force in all three principal axes, permitting full-scale and large-scale testing of structural systems and components including reinforced concrete and steel members.\n\nThe high bay includes a large open area for construction material preparation and fabrication and an on-site concrete batching area, allowing specimens to be cast, cured, and tested without off-site handling. The Concrete Production area of the Construction Materials Lab is housed within the high bay. The space is used for research, for classroom demonstration in Steel Design and Reinforced Concrete Design, and for student competition teams including Steel Bridge, Concrete Canoe, and GeoWall. The facility is directly visible from the building atrium, which makes it well suited to public engagement, outreach events, and demonstration activities associated with broader impacts plans.",
+ todo:"Specify specimen sizes, load protocols, actuator configuration, and instrumentation channels your project requires." },
+
+blattner: { group:"Buildings and Major Facilities", nih:"L", title:"Blattner Robotics and Automation Laboratory", loc:"Schoenecker Center",
+ brief:"Industrial automation laboratory with a FANUC six-axis arm, two Epson SCARA arms, a Universal Robots collaborative robot, conveyor and vision systems, and Allen-Bradley PLCs.",
+ full:"The Blattner Robotics and Automation Lab is equipped with production-grade industrial automation hardware rather than instructional surrogates. At its core are a FANUC six-axis articulated robotic arm and two Epson SCARA arms, supporting work in multi-axis motion control, trajectory planning, and industrial robot programming on two of the most widely deployed platforms in industry. A Universal Robots collaborative robot provides a force-limited platform for research on human-robot interaction and shared workspaces.\n\nProcess automation is supported by a Dorner conveyor system integrated with the robotic cells, allowing study of material handling, buffering, and production flow under realistic timing constraints. Machine vision equipment supports object recognition, pose estimation, and automated inspection. Allen-Bradley programmable logic controllers provide industrial control programming and integration experience. Safety relays and laser area scanners are installed throughout, and the cell is configured to industrial safety standards, which permits work with external industry partners under realistic operating conditions.",
+ todo:"Identify the specific robot platform, end effector, payload, and cycle requirements for the proposed work." },
+
+seniorDesign: { group:"Buildings and Major Facilities", nih:"L", title:"Senior Design Clinic Studio", loc:"Facilities and Design Center",
+ brief:"Dedicated capstone design studio with per-team workspace, fabrication tools, electronic instrumentation, and utility service, supporting externally sponsored design projects.",
+ full:"The Senior Design Clinic Studio is a dedicated collaborative design and build facility supporting the capstone experience, in which student teams design, build, and deliver an engineered solution to a real-world problem for an external customer. Each team is assigned a furnished workspace, and the studio provides shared meeting space for team and sponsor reviews.\n\nThe studio is equipped with hand tools, power tools, hardware, electronic instruments and components, compressed air, specialty electric service connections, water supply, and safety equipment. It is staffed by faculty and a professional lab management team who supervise fabrication activity and sponsor interaction. For sponsored projects, the Clinic provides an established, contractually structured mechanism for engaging undergraduate design teams on externally defined problems, including intellectual property and confidentiality handling already in routine use with industry sponsors.",
+ todo:"State whether a capstone team will be engaged, and describe the deliverable and sponsor relationship." },
+
+designCenter: { group:"Buildings and Major Facilities", nih:"L", title:"Engineering Design Center", loc:"Facilities and Design Center",
+ brief:"Central student design and fabrication resource providing raw materials, electronics stock, structural testing equipment, and 24-hour computer labs with engineering software.",
+ full:"The Engineering Design Center is the School's central design, fabrication, and prototyping resource, open day and night. Stocked raw materials include sheet metal, bar and tube stock, plywood and lumber, fasteners, hardware, and adhesives. Civil and structural materials and instrumentation include truss materials, concrete, aggregates, tensile testers, and a concrete crusher.\n\nElectronics inventory includes discrete components, LEDs and lamps, sensors and transducers, microcontrollers and processors, wire and connectors, enclosures, batteries and power supplies. Student computer laboratories provide high-performance workstations on a fast network, with industry-standard software for computer-aided design, numerical simulation, schematic capture, printed circuit board layout, and controls and automation. A staffed fabrication shop and the Tool Crib lending library operate alongside the Center.",
+ todo:"" },
+
+/* ---------------- ELECTRONICS AND CONTROLS ---------------- */
+embeddedSys: { group:"Electrical and Computer Engineering Laboratories", nih:"L", title:"Embedded Systems and Intelligent Robots Laboratory", loc:"Schoenecker Center",
+ brief:"Laboratory for development of complete embedded systems, intelligent robots, IoT devices, wireless sensor networks, and smart devices.",
+ full:"The Embedded Systems and Intelligent Robots Lab supports end-to-end development of embedded computing systems, from board-level bring-up through system integration and field deployment. Work in the space covers microcontroller and system-on-chip firmware development, real-time and low-power design, sensor interfacing and signal conditioning, wireless sensor networks, Internet of Things devices, and autonomous and semi-autonomous robotic platforms.\n\nThe laboratory is configured as a project space rather than a fixed instructional bench layout, so hardware can be left instrumented and under test across a multi-week or multi-semester campaign. It is directly adjacent to the Digital Electronics Lab, the ECE Supply Center, and the Rapid Prototyping Center, which shortens the design-build-test cycle for custom hardware.",
+ todo:"List the specific development platforms, FPGAs or microcontrollers, test instruments, and software toolchains the project requires." },
+
+digitalElec: { group:"Electrical and Computer Engineering Laboratories", nih:"L", title:"Digital Electronics Laboratory", loc:"Schoenecker Center",
+ brief:"Multipurpose teaching and project laboratory for digital electronics, microprocessors, and embedded systems.",
+ full:"The Digital Electronics Lab is a multipurpose hands-on laboratory supporting digital logic design, microprocessor and microcontroller systems, and embedded systems coursework and project work. Benches are equipped for digital design capture, verification, and hardware debug, and the space supports both structured instructional laboratories and open project work.\n\nThe laboratory anchors the digital design and embedded systems course sequence, which makes it the natural site for curriculum development, instructional materials testing, and education research components of sponsored projects.",
+ todo:"Specify benchtop instrumentation, development boards, and seat counts if the project depends on them." },
+
+analogElec: { group:"Electrical and Computer Engineering Laboratories", nih:"L", title:"Analog Electronics Laboratory", loc:"Schoenecker Center",
+ brief:"Circuits and analog electronics laboratory with a full suite of tools and test equipment at every workstation.",
+ full:"The Analog Electronics Lab supports circuit analysis, analog design, and signal conditioning work. Every workstation is equipped with a full complement of tools and test instrumentation, allowing an entire laboratory section to work simultaneously without instrument sharing. The space supports operational amplifier and filter design, transducer front ends, and analog measurement, and is available for project work outside scheduled course hours.",
+ todo:"Identify specific instrumentation and bandwidth or resolution requirements." },
+
+controlsLab: { group:"Electrical and Computer Engineering Laboratories", nih:"L", title:"Toro Controls and Automation Laboratory", loc:"Schoenecker Center",
+ brief:"Feedback controls laboratory with industry-standard computers, data acquisition systems, oscilloscopes, power supplies, and signal generators for motor speed and position control.",
+ full:"The Toro Controls and Automation Lab provides hands-on work in feedback control system design and implementation. The laboratory is equipped with industry-standard computers, data acquisition systems, oscilloscopes, power supplies, and signal generators. Students and researchers develop and tune feedback controllers for high-performance speed and position control of electric motors, working through system identification, controller synthesis, discrete implementation, and experimental validation on physical plants rather than in simulation alone.",
+ todo:"Describe the plant, sampling rates, and data acquisition channel counts needed." },
+
+powerLab: { group:"Electrical and Computer Engineering Laboratories", nih:"L", title:"Power Systems Laboratory", loc:"Schoenecker Center",
+ brief:"Dual-purpose laboratory for power generation, distribution, and control systems instruction and research.",
+ full:"The Power Systems Lab is a dual-purpose facility supporting instruction and research in power generation, distribution, and control. The laboratory complements the full-power capability of the Center for Microgrid Research by providing a bench-scale environment for controller development, protection scheme prototyping, and measurement work prior to full-power validation.",
+ todo:"State voltage and power levels required, and whether full-power testing at the Center for Microgrid Research is also needed." },
+
+powerResearch: { group:"Electrical and Computer Engineering Laboratories", nih:"L", title:"Power Systems Research Laboratory", loc:"O'Shaughnessy Science Hall",
+ brief:"Highly configurable research laboratory typically used for power electronics and power and sensor optics work.",
+ full:"The Power Systems Research Lab is a highly reconfigurable research space capable of supporting multiple concurrent objectives. It is typically configured for power electronics research or for power and sensor optics work. Because the space is not committed to a fixed instructional layout, it can accommodate long-duration experimental setups that must remain assembled and instrumented across a project period.",
+ todo:"Describe the experimental configuration and any dedicated space commitment required." },
+
+eceSupply: { group:"Electrical and Computer Engineering Laboratories", nih:"X", title:"Electrical and Computer Engineering Supply Center", loc:"Schoenecker Center",
+ brief:"Staffed supply room and workspace holding a complete inventory of electronic components, circuit-building supplies, tools, and project equipment.",
+ full:"The ECE Supply Center combines a stocked component inventory with an open workspace. It holds a complete inventory of electronic components and circuit-building supplies together with the tools and equipment needed for project fabrication and rework. Immediate on-site component availability materially reduces iteration time on custom hardware, since design changes do not stall on procurement lead time.",
+ todo:"" },
+
+appliedAILab: { group:"Electrical and Computer Engineering Laboratories", nih:"C", title:"Applied AI and Data Science Laboratory", loc:"Schoenecker Center",
+ brief:"Laboratory for developing and testing artificial intelligence solutions, machine learning methods, data science workflows, and intelligent computing systems.",
+ full:"The Applied AI and Data Science Lab supports development and evaluation of artificial intelligence and machine learning systems, data science workflows, and intelligent computing applications. The space serves both coursework and faculty and graduate research, and sits alongside the embedded systems and robotics laboratories, which supports work at the boundary between machine learning models and the physical systems that run them, including edge inference and hardware-aware model deployment.",
+ todo:"State compute requirements, including GPU class and count, memory, storage, and whether University or external HPC resources are needed." },
+
+/* ---------------- MECHANICAL ---------------- */
+machineShop: { group:"Manufacturing and Mechanical Laboratories", nih:"L", title:"Schilling Machining and Manufacturing Center", loc:"Facilities and Design Center",
+ brief:"Professionally staffed fabrication center with CNC machining, manual milling and turning, MIG and TIG welding, and full woodworking capability.",
+ full:"The Schilling Machining and Manufacturing Center provides fabrication support for projects across the University and is overseen by full-time professional staff. Capabilities include CNC machining on industrial mills and lathes, manual milling and turning, MIG and TIG welding, and a complete suite of woodworking equipment.\n\nProfessional machinists support fabrication of custom research apparatus, test fixtures, and one-off components, which removes the need to budget external machining for most mechanical work. The shops are open to students during supervised hours through a certification and badging program, so trained student researchers can perform their own fabrication under supervision. The Center also hosts Department of Defense ACE program CNC training on this equipment.",
+ todo:"Describe custom apparatus to be fabricated, tolerances, and materials." },
+
+rapidProto: { group:"Manufacturing and Mechanical Laboratories", nih:"L", title:"Rapid Prototyping Center", loc:"Schoenecker Center",
+ brief:"Additive manufacturing and laser cutting facility with SLA, FDM, and PolyJet printers plus chemical etching stations.",
+ full:"The Rapid Prototyping Center enables fast iteration of physical prototypes using multiple additive manufacturing technologies. Equipment includes stereolithography (resin), fused deposition modeling, and PolyJet 3D printers, giving access to a range of resolutions, material properties, and multi-material capability. Laser cutters and chemical etching stations extend the facility to sheet stock and planar parts.\n\nTypical research use includes precision fabrication of custom fixtures, sensor and electronics housings, flow and test article geometries, and iterative mechanism prototypes. The Center serves the entire College of Engineering, which makes it available across disciplines rather than restricted to a single research group.",
+ todo:"Specify materials, tolerance, and build volume requirements, and expected print volume over the project period." },
+
+machineDesign: { group:"Manufacturing and Mechanical Laboratories", nih:"L", title:"Machine Design Laboratory", loc:"Facilities and Design Center",
+ brief:"Laboratory for conceptualizing and evaluating machines against performance criteria using springs, screws, bearings, linkages, cams, gears, and dc motors.",
+ full:"The Machine Design Lab supports conceptual design and evaluation of machines against defined performance criteria. Work in the space covers the selection and application of springs, power screws, bearings, four-bar and other linkages, cams, gear trains, and direct-current motors, connecting analytical design methods to physical mechanism behavior and measured performance.",
+ todo:"" },
+
+materials: { group:"Manufacturing and Mechanical Laboratories", nih:"L", title:"Materials Laboratory", loc:"Schoenecker Center",
+ brief:"Materials characterization laboratory with MTS tensile testing, LIBS and Raman spectroscopy, hardness and microhardness testing, digital microscopy, and scanning electron microscopy.",
+ full:"The Materials Lab provides mechanical and microstructural characterization of engineering materials. An MTS tensile test machine determines stiffness, yield strength, ultimate tensile strength, and ductility for metals, polymers, and composites. Hardness and microhardness testers provide non-destructive surface hardness assessment correlated to bulk strength.\n\nCompositional and structural characterization is supported by a handheld laser-induced breakdown spectroscopy (LIBS) instrument, which characterizes metals by generating a surface plasma and analyzing emission during atomic recombination; a Raman laser system for identifying and characterizing polymers by vibrational response; a Keyence digital microscope providing magnification to 200x; and a scanning electron microscope for high-resolution imaging and elemental analysis. Precision scales support density measurement, and spark analysis is used for carbon content assessment in steels. Granta EduPack is available for materials selection and property database work.\n\nThe combination of mechanical testing, spectroscopy, and electron microscopy in a single accessible facility supports failure analysis, reverse engineering, and process-structure-property studies without external service laboratory costs.",
+ todo:"Identify specimen types and counts, required standards, and whether SEM time or sample preparation support is needed." },
+
+advMaterials: { group:"Manufacturing and Mechanical Laboratories", nih:"L", title:"Advanced Materials and Manufacturing Laboratory", loc:"O'Shaughnessy Science Hall",
+ brief:"Research laboratory for novel materials development and manufacturing process testing and optimization, including additive manufacturing composites and micro-scale machining.",
+ full:"The Advanced Materials and Manufacturing Lab supports research in the development of novel materials and in the testing and optimization of manufacturing processes. Active research directions include polymer composites for additive manufacturing, meso-scale structure modeling in additive manufacturing, and micro-scale machining processes. The laboratory is a research space rather than an instructional laboratory, so experimental campaigns can occupy dedicated setups over extended periods.",
+ todo:"Describe the process under study, measurement approach, and any specialized fixturing required." },
+
+solidMech: { group:"Manufacturing and Mechanical Laboratories", nih:"L", title:"Solid Mechanics Laboratory", loc:"Schoenecker Center",
+ brief:"Laboratory for engineering mechanics work including material deformation, buckling, and measurement of acceleration and oscillation in damped systems.",
+ full:"The Solid Mechanics Lab supports experimental work in engineering mechanics and dynamics. Topics addressed include material deformation and buckling behavior, and the measurement of acceleration and oscillation in damped dynamic systems. The laboratory provides the instrumentation needed to connect analytical mechanics predictions to measured structural and dynamic response.",
+ todo:"" },
+
+/* ---------------- THERMAL AND FLUIDS ---------------- */
+fluidMech: { group:"Thermal and Fluid Sciences Laboratories", nih:"L", title:"Fluid Mechanics Laboratory", loc:"O'Shaughnessy Science Hall",
+ brief:"Instructional fluids laboratory with a flow bench, an open-circuit subsonic wind tunnel, and a drop tank.",
+ full:"The Fluid Mechanics Lab provides hands-on experience with fluid measurement instrumentation and uncertainty analysis. Major apparatus includes a flow bench supporting a range of pipe flow studies; an open-circuit subsonic wind tunnel used for lift, drag, and airfoil analysis; and a drop tank used for terminal velocity, bubble formation, and water impact studies.\n\nBeyond structured experiments, students conduct a self-directed two-month investigation on a fluid mechanics problem of their choosing, which makes the facility a natural site for undergraduate research experiences and mentored independent project components of sponsored work.",
+ todo:"Specify test section dimensions, velocity range, and instrumentation needs if wind tunnel or flow bench time is required." },
+
+fluidSystems: { group:"Thermal and Fluid Sciences Laboratories", nih:"L", title:"Fluid Systems Research Laboratory", loc:"O'Shaughnessy Science Hall",
+ brief:"Research laboratory for gas-liquid multiphase flow, skin friction modification, wind tunnel testing, and wall roughness effects, with high-speed imaging and machine vision analysis.",
+ full:"The Fluid Systems Research Lab is dedicated to experimental fluid mechanics research across several areas, including gas-liquid multiphase flows, skin friction modification, wind tunnel testing, and the effect of wall roughness on internal flows. High-speed imaging systems are used routinely, coupled with custom machine-vision algorithms developed in-house for processing digital image sequences and extracting quantitative flow field and interface data.\n\nThe combination of experimental apparatus and image-processing capability supports quantitative measurement in flows where conventional intrusive instrumentation is not viable.",
+ todo:"Describe flow regime, imaging frame rate and resolution requirements, and data storage volume." },
+
+laserVel: { group:"Thermal and Fluid Sciences Laboratories", nih:"L", title:"Laser Velocimetry Research Laboratory", loc:"O'Shaughnessy Science Hall",
+ brief:"Laser-based flow measurement laboratory with lasers, high-speed cameras, and image processing for three-dimensional flow characterization.",
+ full:"The Laser Velocimetry Research Lab is equipped with fluid mechanics instrumentation for measurement of complex flows. Lasers, high-speed cameras, and image processing algorithms are used to characterize three-dimensional flow fields in engineering, environmental, and biological applications.\n\nThe laboratory's measurement capability is regularly used to generate experimental validation data for computational engineering models used in industry, which positions it well for projects requiring independent validation of simulation results.",
+ todo:"Specify the flow of interest, seeding approach, measurement volume, and required velocity resolution." },
+
+thermo: { group:"Thermal and Fluid Sciences Laboratories", nih:"L", title:"Thermodynamics Laboratory", loc:"O'Shaughnessy Science Hall",
+ brief:"Laboratory for practical work with thermodynamic systems and energy conversion, transport, and transformation.",
+ full:"The Thermodynamics Lab provides practical experience with thermodynamic systems and the instrumentation used to characterize them, addressing how energy is used, transported, and transformed into useful work and process output. Coursework in the space also treats the broader societal, economic, and environmental context of energy systems, which supports projects with an energy policy or sustainability dimension.",
+ todo:"" },
+
+/* ---------------- CIVIL AND ENVIRONMENTAL ---------------- */
+construction: { group:"Civil and Environmental Engineering Laboratories", nih:"L", title:"Construction Materials Laboratory", loc:"Schoenecker Center and Iversen High Bay",
+ brief:"Laboratory for constructing and testing concrete, asphalt, masonry, structural brick, timber, and metals under ASTM standard procedures.",
+ full:"The Construction Materials Lab supports fabrication and testing of the full range of construction materials, including concrete, asphalt, masonry, structural brick, timber, and various metals. Testing follows ASTM standard procedures, so results are directly comparable to industry and agency practice.\n\nThe Concrete Production area of the lab is housed within the Iversen Structural High Bay, which allows specimens to be batched, cast, cured, and then load-tested at full scale in the adjacent high bay without transport between facilities. This co-location is a practical advantage for projects requiring specimen-to-structure scale continuity.",
+ todo:"List the specific ASTM procedures, specimen counts, and curing duration required." },
+
+geotech: { group:"Civil and Environmental Engineering Laboratories", nih:"L", title:"Geotechnical Research Laboratory", loc:"O'Shaughnessy Science Hall",
+ brief:"Research laboratory with a large-scale testbed, signal acquisition and processing systems, and field soil characterization sensors.",
+ full:"The Geotechnical Research Lab supports applied and interdisciplinary geotechnical engineering research. The facility is equipped with a large-scale testbed permitting experiments at a scale beyond conventional bench specimens, signal acquisition and processing systems, and state-of-the-art sensors for field soil characterization. The combination of laboratory testbed and field instrumentation supports research programs that must bridge controlled laboratory conditions and in-situ measurement.",
+ todo:"Describe testbed configuration, sensor types and channel counts, and any field deployment planned." },
+
+soilMech: { group:"Civil and Environmental Engineering Laboratories", nih:"L", title:"Soil Mechanics Laboratory", loc:"O'Shaughnessy Science Hall",
+ brief:"Laboratory and field soil testing facility with specialized apparatus for mechanical and hydraulic soil property evaluation.",
+ full:"The Soil Mechanics Lab provides soil testing capability in both laboratory and field settings. The facility is equipped with specialized apparatus for evaluating the mechanical and hydraulic properties of soils, supporting classification, strength, consolidation, and permeability work. The laboratory is used to interpret empirical data and assess the suitability of in-situ soils for construction applications, and complements the larger-scale capability of the Geotechnical Research Lab.",
+ todo:"" },
+
+waterLab: { group:"Civil and Environmental Engineering Laboratories", nih:"L", title:"St. Thomas Water Lab (Water Resources and Environmental Engineering)", loc:"Schoenecker Center",
+ brief:"Teaching and research laboratory configured to simulate a water treatment facility laboratory, with jar testers, water quality probes, colorimeters, and hydraulic apparatus.",
+ full:"The St. Thomas Water Lab is a teaching and research space designed to reproduce the working environment of a water treatment plant laboratory. Instrumentation includes jar testers for coagulation and flocculation optimization, water quality probes, and colorimeters, allowing bench-scale simulation and monitoring of treatment unit processes.\n\nA core project in the space involves treating Mississippi River water to potable standards, which exercises the full analytical and process chain on a real and variable source water. The laboratory also houses hydraulic apparatus for fluid mechanics work relevant to water resources engineering, and supports environmental chemistry and microbiology experiments including water and wastewater treatment simulation and contaminant measurement.",
+ todo:"Identify target analytes, detection limits, sample volumes and frequency, and any required method certifications." },
+
+surveying: { group:"Civil and Environmental Engineering Laboratories", nih:"L", title:"Surveying Laboratory", loc:"Schoenecker Center",
+ brief:"Base for hands-on land surveying instruction delivered with a professional land surveyor.",
+ full:"The Surveying Lab is the staging point for the School's hands-on surveying course, in which students learn the principles and methods of land surveying directly from a practicing professional land surveyor. The laboratory holds field survey instrumentation and serves as the base for field exercises on and around campus.",
+ todo:"" },
+
+/* ---------------- BIOMEDICAL ---------------- */
+biomedCircuits: { group:"Biomedical and Visualization Laboratories", nih:"L", title:"Biomedical Circuits and Optical Sensing Laboratory", loc:"Schoenecker Center",
+ brief:"Laboratory for assessment and design of biomedical circuits and optical sensing systems.",
+ full:"The Biomedical Circuits and Optical Sensing Lab supports assessment and design of biomedical instrumentation and optical sensing systems. Work in the space covers biopotential and biosignal front ends, optical measurement techniques applied to physiological sensing, and the circuit and signal-processing chain from transducer through digitization. The laboratory supports device-level research and prototyping for medical device applications, an area with substantial regional industry presence.",
+ todo:"Describe the sensing modality, signal characteristics, and any human subjects involvement, which requires separate IRB approval." },
+
+biomedResearch: { group:"Biomedical and Visualization Laboratories", nih:"L", title:"Biomedical Research Laboratory", loc:"O'Shaughnessy Science Hall",
+ brief:"Research laboratory focused on assessment and design of electrical and mechanical biomedical devices.",
+ full:"The Biomedical Research Lab supports research on the assessment and design of both electrical and mechanical biomedical devices. As a dedicated research space it accommodates sustained experimental campaigns, including device characterization, bench testing, and design iteration. The School's Master of Science in Regulatory Science and Graduate Certificate in Medical Device Development provide adjacent expertise in design controls and regulatory pathway questions that frequently accompany device research.",
+ todo:"Describe the device class, bench test protocols, and whether animal or human subjects work is contemplated, which requires separate IACUC or IRB review." },
+
+dataViz: { group:"Biomedical and Visualization Laboratories", nih:"C", title:"3D Data Visualization Studio", loc:"O'Shaughnessy Science Hall",
+ brief:"Immersive visualization facility built around a 32-foot curved 3D display wall funded by an Army Research Laboratory equipment grant.",
+ full:"The 3D Data Visualization Studio is built around a 32-foot curved three-dimensional display wall acquired through an equipment grant from the Army Research Laboratory. The wall supports visualization of large and complex datasets, allowing faculty, students, and external partners to identify patterns and relationships that are difficult to resolve on conventional displays, and to present findings through interactive and immersive experiences.\n\nThe studio has been used for scientific visualization, engineering analysis including jet engine visualization, cultural heritage and art projects, and virtual site tours. For sponsored projects the facility provides a distinctive capability for data exploration, sponsor and stakeholder briefings, and public engagement activities under broader impacts plans.",
+ todo:"Describe the datasets to be visualized, formats, and any rendering pipeline requirements." },
+
+/* ---------------- SUPPORT ---------------- */
+toolCrib: { group:"Support Resources and Institutional Environment", nih:"X", title:"Engineering Tool Crib", loc:"Facilities and Design Center",
+ brief:"Card-access tool lending library holding hand tools, power tools, hardware, and fasteners available to all students.",
+ full:"The Engineering Tool Crib operates as a lending library for tools. Students check out hand tools and power tools of all kinds by swiping a student identification card, and a variety of fasteners and hardware is available for use. The Tool Crib supports all classes, laboratories, and senior design activity, which means research projects do not need to budget separately for general-purpose tooling.",
+ todo:"" },
+
+computing: { group:"Support Resources and Institutional Environment", nih:"C", title:"Engineering Computing Resources", loc:"Schoenecker Center, O'Shaughnessy Science Hall, and Facilities and Design Center",
+ brief:"High-performance workstations available around the clock with industry-standard simulation, design, and analysis software on a high-speed campus network.",
+ full:"Engineering computing laboratories provide high-performance workstations available to students, faculty, and researchers around the clock on a fast campus network. Installed software includes industry-standard packages for numerical simulation and analysis, computer-aided design, schematic capture and printed circuit board layout, controls and automation development, and data analysis. Representative packages in use across the School include ANSYS, MATLAB and Simulink, SolidWorks, and LabVIEW.\n\nCentral University information technology provides network infrastructure, storage, backup, and security services, and supports the data handling and retention practices described in the project Data Management Plan.",
+ todo:"State computational scale, licensed software required, storage volume, and whether dedicated or high-performance computing resources beyond standard workstations are needed." },
+
+offices: { group:"Support Resources and Institutional Environment", nih:"O", title:"Office and Collaboration Space", loc:"Schoenecker Center and O'Shaughnessy Science Hall",
+ brief:"Dedicated faculty and graduate student offices with standard computing and network infrastructure, plus shared conference and collaboration space.",
+ full:"Faculty are provided with dedicated private office space, and graduate students are provided with assigned office or workstation space, within the Schoenecker Center and O'Shaughnessy Science Hall. All offices are equipped with standard computing hardware, network connectivity, and access to shared printing and University enterprise systems.\n\nConference rooms and collaboration and meeting spaces are distributed throughout the engineering facilities and are equipped with presentation technology and videoconferencing, supporting project team meetings, advisory board and sponsor reviews, and remote collaboration with external partners. These spaces are available for scheduled project use at no direct cost to sponsored projects.",
+ todo:"" },
+
+admin: { group:"Support Resources and Institutional Environment", nih:"X", title:"Institutional Research Administration and Support", loc:"University of St. Thomas",
+ brief:"Central sponsored programs administration, compliance oversight, library and information resources, and machine shop and laboratory technical staff.",
+ full:"The University maintains central administrative infrastructure for sponsored research, including pre-award proposal development and submission support, post-award financial administration and effort reporting, subaward administration, and export control review. Compliance oversight includes Institutional Review Board review of human subjects research and Institutional Animal Care and Use Committee review where applicable, together with research integrity and responsible conduct of research training.\n\nThe University Libraries provide access to major engineering and scientific databases and journal collections, interlibrary loan, and research data and citation support. Within the College of Engineering, full-time professional laboratory and machine shop staff maintain equipment, supervise student use, and provide fabrication support, which reduces the technical staffing that must be charged directly to sponsored projects.",
+ todo:"" },
+
+industry: { group:"Support Resources and Institutional Environment", nih:"X", title:"Industry Partnership Infrastructure", loc:"College of Engineering",
+ brief:"Established mechanisms for industry engagement including the Senior Design Clinic, New Product Tech Ventures, and Centers of Excellence partnerships.",
+ full:"The College of Engineering maintains an extensive network of relationships with regional employers, particularly across the Twin Cities medical device, manufacturing, and energy sectors. Structured mechanisms for industry engagement include Senior Design Clinic sponsorship, in which companies fund and define capstone design projects; the New Product Tech Ventures program and its associated laboratory, which pairs student teams with engineers, business professionals, and investors to develop new products; and partnership programs operated through the Centers of Excellence.\n\nThese mechanisms provide established contracting templates, intellectual property and confidentiality practice, and an existing partner base, which supports industry collaboration, technology translation, and workforce development components of sponsored projects without new institutional infrastructure.",
+ todo:"Name the specific partner organizations and describe their role and any letters of collaboration provided." }
+
+};
+
+/* --------------- BUILD FORM --------------- */
+const GROUP_ORDER = [
+ "Centers of Excellence",
+ "Buildings and Major Facilities",
+ "Electrical and Computer Engineering Laboratories",
+ "Manufacturing and Mechanical Laboratories",
+ "Thermal and Fluid Sciences Laboratories",
+ "Civil and Environmental Engineering Laboratories",
+ "Biomedical and Visualization Laboratories",
+ "Support Resources and Institutional Environment"
+];
+
+function buildForm(){
+  const c = document.getElementById('form-container');
+  GROUP_ORDER.forEach(g => {
+    const keys = Object.keys(DATA).filter(k => DATA[k].group === g);
+    if(!keys.length) return;
+    const h = document.createElement('div');
+    h.className = 'category-header';
+    h.innerHTML = '<span>'+g+'</span><span class="mini"><button type="button" onclick="groupSet(\''+g.replace(/'/g,"\\'")+'\',true)">all</button>|<button type="button" onclick="groupSet(\''+g.replace(/'/g,"\\'")+'\',false)">none</button></span>';
+    c.appendChild(h);
+    const grp = document.createElement('div');
+    grp.className = 'checkbox-group';
+    keys.forEach(k => {
+      const lab = document.createElement('label');
+      lab.className = 'checkbox-item';
+      lab.innerHTML = '<input type="checkbox" value="'+k+'" data-group="'+g+'" onchange="updateCount()"><span>'+DATA[k].title+
+        (DATA[k].loc ? '<span class="loc">'+DATA[k].loc+'</span>' : '')+'</span>';
+      grp.appendChild(lab);
+    });
+    c.appendChild(grp);
+  });
+}
+function groupSet(g, val){
+  document.querySelectorAll('input[type="checkbox"][data-group="'+g+'"]').forEach(cb => cb.checked = val);
+  updateCount();
+}
+function selectAll(val){
+  document.querySelectorAll('#form-container input[type="checkbox"]').forEach(cb => cb.checked = val);
+  updateCount();
+}
+function updateCount(){
+  const n = document.querySelectorAll('#form-container input[type="checkbox"]:checked').length;
+  document.getElementById('count').textContent = n + (n===1 ? ' resource selected' : ' resources selected');
+}
+function getSelectedKeys(){
+  return Array.from(document.querySelectorAll('#form-container input[type="checkbox"]:checked')).map(cb => cb.value);
+}
+
+/* --------------- SECTION ORGANIZATION --------------- */
+const NIH_LABELS = { L:"Laboratory", C:"Computer and Computational Resources", O:"Office", X:"Other Resources" };
+const NIH_ORDER = ["L","C","O","X"];
+
+function organize(keys, agency){
+  // returns array of {heading, keys[]}
+  if(agency === 'nih'){
+    return NIH_ORDER.map(cat => ({
+      heading: NIH_LABELS[cat],
+      keys: keys.filter(k => DATA[k].nih === cat)
+    })).filter(s => s.keys.length);
+  }
+  if(agency === 'nsf'){
+    return GROUP_ORDER.map(g => ({
+      heading: g,
+      keys: keys.filter(k => DATA[k].group === g)
+    })).filter(s => s.keys.length);
+  }
+  return [{ heading:"", keys:keys }];
+}
+
+function bodyText(k, detail){
+  return detail === 'brief' ? DATA[k].brief : DATA[k].full;
+}
+
+function intro(agency){
+  if(agency === 'nih'){
+    return "The University of St. Thomas College of Engineering occupies more than 400,000 square feet of laboratory, research, and instructional space on the St. Paul south campus, distributed across the Schoenecker Center (opened Spring 2024), the Facilities and Design Center, and O'Shaughnessy Science Hall. The School maintains more than 35 dedicated laboratories together with five Centers of Excellence. The scientific environment described below contributes to the probability of success of the proposed work by providing the specific instrumentation, professional technical staff, and institutional support required, and by situating the project within an active applied research program with sustained regional industry engagement.";
+  }
+  return "The University of St. Thomas College of Engineering occupies more than 400,000 square feet of laboratory, research, and instructional space on the University's St. Paul south campus, distributed across the Schoenecker Center (opened Spring 2024), the Facilities and Design Center, and O'Shaughnessy Science Hall. The School maintains more than 35 dedicated laboratories and five Centers of Excellence. The facilities, equipment, and resources described below are available to the project team and are not charged directly to the proposed award unless separately identified in the budget.";
+}
+
+/* --------------- GENERATORS --------------- */
+function generateContent(format){
+  const keys = getSelectedKeys();
+  if(!keys.length){ alert("Please select at least one facility or resource."); return null; }
+  const agency = document.getElementById('agency').value;
+  const detail = document.getElementById('detail').value;
+  const pi = document.getElementById('pi').value.trim();
+  const custom = document.getElementById('custom').value.trim();
+  const sections = organize(keys, agency);
+  const docTitle = agency === 'nih' ? "FACILITIES AND OTHER RESOURCES" : "FACILITIES, EQUIPMENT AND OTHER RESOURCES";
+  const showTodo = detail === 'full';
+
+  if(format === 'md'){
+    let s = "# " + docTitle + "\n\n**University of St. Thomas, College of Engineering**" + (pi ? "  \nPrincipal Investigator: " + pi : "") + "\n\n---\n\n";
+    s += intro(agency) + "\n\n";
+    sections.forEach(sec => {
+      if(sec.heading) s += "## " + sec.heading + "\n\n";
+      sec.keys.forEach(k => {
+        s += "### " + DATA[k].title + "\n";
+        if(DATA[k].loc) s += "*Location: " + DATA[k].loc + "*\n\n";
+        s += bodyText(k, detail) + "\n\n";
+        if(showTodo && DATA[k].todo) s += "> **[PI TO COMPLETE]** " + DATA[k].todo + "\n\n";
+      });
+    });
+    if(custom) s += "## Relationship to the Proposed Work\n\n" + custom + "\n";
+    return s;
+  }
+
+  if(format === 'tex'){
+    let s = "\\documentclass[11pt]{article}\n\\usepackage[margin=1in]{geometry}\n\\usepackage{xcolor}\n\\usepackage{titlesec}\n\\usepackage{parskip}\n\n";
+    s += "\\definecolor{USTPurple}{HTML}{512698}\n\\definecolor{PIBlue}{HTML}{0000CC}\n";
+    s += "\\titleformat{\\section}{\\large\\bfseries\\color{USTPurple}}{}{0em}{}\n";
+    s += "\\titleformat{\\subsection}{\\normalsize\\bfseries}{}{0em}{}\n\n\\begin{document}\n\n";
+    s += "\\begin{center}\n{\\Large\\bfseries\\color{USTPurple}" + docTitle + "}\\\\[0.2cm]\n{\\large University of St. Thomas, College of Engineering}";
+    if(pi) s += "\\\\[0.1cm]\n{\\normalsize Principal Investigator: " + tex(pi) + "}";
+    s += "\n\\end{center}\n\\vspace{0.3cm}\n\n";
+    s += tex(intro(agency)) + "\n\n";
+    sections.forEach(sec => {
+      if(sec.heading) s += "\\section{" + tex(sec.heading) + "}\n";
+      sec.keys.forEach(k => {
+        s += "\\subsection{" + tex(DATA[k].title) + "}\n";
+        if(DATA[k].loc) s += "\\textit{Location: " + tex(DATA[k].loc) + "}\n\n";
+        s += tex(bodyText(k, detail)).replace(/\n\n/g, "\n\n") + "\n\n";
+        if(showTodo && DATA[k].todo) s += "{\\color{PIBlue}\\textit{[PI to complete: " + tex(DATA[k].todo) + "]}}\n\n";
+      });
+    });
+    if(custom){ s += "\\section{Relationship to the Proposed Work}\n" + tex(custom) + "\n\n"; }
+    s += "\\end{document}";
+    return s;
+  }
+
+  // docx (HTML for Word)
+  let s = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>";
+  s += "<head><meta charset='utf-8'><title>" + docTitle + "</title><style>";
+  s += "body{font-family:'Times New Roman',serif;font-size:11pt;line-height:1.35;}";
+  s += "h1{color:#512698;text-align:center;font-size:15pt;margin-bottom:4px;}";
+  s += "h2.sub{text-align:center;font-size:12pt;font-weight:normal;margin:0 0 4px 0;}";
+  s += "h3.sec{font-size:12.5pt;color:#512698;border-bottom:1px solid #cccccc;margin-top:16pt;margin-bottom:6pt;}";
+  s += "h4.fac{font-size:11pt;font-weight:bold;margin-top:11pt;margin-bottom:2pt;}";
+  s += "p{margin:4pt 0;text-align:justify;}";
+  s += "p.loc{font-style:italic;color:#555555;font-size:10pt;margin:0 0 4pt 0;}";
+  s += "p.todo{color:#0000CC;font-style:italic;margin:4pt 0 8pt 0;}";
+  s += "</style></head><body>";
+  s += "<h1>" + docTitle + "</h1>";
+  s += "<h2 class='sub'>University of St. Thomas, College of Engineering</h2>";
+  if(pi) s += "<h2 class='sub'>Principal Investigator: " + esc(pi) + "</h2>";
+  s += "<hr/>";
+  s += para(intro(agency));
+  sections.forEach(sec => {
+    if(sec.heading) s += "<h3 class='sec'>" + esc(sec.heading) + "</h3>";
+    sec.keys.forEach(k => {
+      s += "<h4 class='fac'>" + esc(DATA[k].title) + "</h4>";
+      if(DATA[k].loc) s += "<p class='loc'>Location: " + esc(DATA[k].loc) + "</p>";
+      s += para(bodyText(k, detail));
+      if(showTodo && DATA[k].todo) s += "<p class='todo'>[PI to complete: " + esc(DATA[k].todo) + "]</p>";
+    });
+  });
+  if(custom){
+    s += "<h3 class='sec'>Relationship to the Proposed Work</h3>";
+    s += para(custom);
+  }
+  s += "</body></html>";
+  return s;
+}
+
+function para(t){ return t.split("\n\n").map(p => "<p>" + esc(p) + "</p>").join(""); }
+function esc(t){ return t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function tex(t){ return t.replace(/\\/g,"\\textbackslash ").replace(/([&%$#_{}])/g,"\\$1").replace(/~/g,"\\textasciitilde ").replace(/\^/g,"\\textasciicircum "); }
+
+function download(format){
+  const content = generateContent(format);
+  if(!content) return;
+  let filename = "UST_Facilities_Equipment_Resources." + format;
+  let mime = "text/plain";
+  if(format === 'docx'){ mime = "application/msword"; filename = "UST_Facilities_Equipment_Resources.doc"; }
+  else if(format === 'tex'){ mime = "application/x-tex"; }
+  else if(format === 'md'){ mime = "text/markdown"; }
+  const blob = new Blob([content], { type: mime });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+}
+
+buildForm();
+updateCount();
+</script>
+
+</body>
+</html>
